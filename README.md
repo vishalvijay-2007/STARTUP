@@ -21,3 +21,7 @@ This project helps startup incubators manage startups, mentors, cohorts, and res
 npm install
 
 npm run dev
+
+## Project Status
+
+Initial README completed.
