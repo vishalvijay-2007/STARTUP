@@ -22,6 +22,4 @@ npm install
 
 npm run dev
 
-## Project Status
-
-Initial README completed.
+## Project Completed
