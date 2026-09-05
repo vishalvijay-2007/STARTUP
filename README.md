@@ -25,6 +25,14 @@ The backend exposes the following API endpoints:
 - PUT /api/courses/:id
 - POST /api/users
 - PUT /api/users/:id
+- GET /api/users/:id/courses
+- POST /api/users/:userId/courses/:courseId
+- DELETE /api/users/:userId/courses/:courseId
+
+Users and courses have a many-to-many relationship. A user's `enrolledCourses`
+references courses, while each course's `students` references enrolled users.
+The enrollment endpoints keep both sides synchronized and course deletion removes
+the deleted course from every user's enrollment list.
 
 If a MongoDB connection string is set in an environment variable, the app stores records in MongoDB. Otherwise it falls back to in-memory storage so the project can still run locally without a database.
 
@@ -74,5 +82,11 @@ PUT http://localhost:5000/api/users/local-USER_ID
    "email": "vishal@example.com",
    "role": "admin"
 }
+
+POST http://localhost:5000/api/users/local-USER_ID/courses/local-COURSE_ID
+
+GET http://localhost:5000/api/users/local-USER_ID/courses
+
+DELETE http://localhost:5000/api/users/local-USER_ID/courses/local-COURSE_ID
 
 ## Project Completed
