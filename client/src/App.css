@@ -107,6 +107,36 @@
   transform: translateY(-1px);
 }
 
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  height: 1px;
+  flex: 1;
+  background: #e2e8f0;
+}
+
+.google-sign-in {
+  display: flex;
+  justify-content: center;
+  min-height: 40px;
+}
+
+.config-text {
+  margin: 0 0 16px;
+  color: #64748b;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
 .section-header {
   display: flex;
   justify-content: space-between;

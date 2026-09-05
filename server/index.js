@@ -3,6 +3,7 @@ import { promisify } from 'node:util'
 import { randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto'
 import cors from 'cors'
 import express from 'express'
+import { OAuth2Client } from 'google-auth-library'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
 
@@ -12,6 +13,8 @@ const courses = []
 const users = []
 const scrypt = promisify(scryptCallback)
 const jwtSecret = process.env.JWT_SECRET || 'local-development-jwt-secret'
+const googleClientId = process.env.GOOGLE_CLIENT_ID || ''
+const googleClient = new OAuth2Client(googleClientId)
 
 app.use(cors())
 app.use(express.json())
@@ -34,6 +37,7 @@ const userSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true },
     username: { type: String, required: true, unique: true, lowercase: true, trim: true },
     passwordHash: { type: String, required: true, select: false },
+    googleId: { type: String, unique: true, sparse: true, select: false },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     role: { type: String, enum: ['student', 'admin'], default: 'student' },
     enrolledCourses: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Course' }],
@@ -74,6 +78,26 @@ const serializeUser = (user) => ({
 })
 
 const createAuthToken = (userId) => jwt.sign({}, jwtSecret, { subject: String(userId), expiresIn: '1h' })
+
+const createUniqueUsername = async (email, excludeId = null) => {
+  const baseUsername = normalizeUsername(email.split('@')[0]).replace(/[^a-z0-9_]/g, '').slice(0, 16) || 'googleuser'
+  let username = baseUsername
+  let suffix = 1
+
+  const usernameExists = async (candidate) => {
+    if (isDatabaseConnected()) {
+      return Boolean(await User.findOne({ username: candidate, ...(excludeId ? { _id: { $ne: excludeId } } : {}) }).lean())
+    }
+    return users.some((user) => user.username === candidate && user._id !== excludeId)
+  }
+
+  while (await usernameExists(username)) {
+    username = `${baseUsername}${suffix}`.slice(0, 20)
+    suffix += 1
+  }
+
+  return username
+}
 
 const requireAuth = async (request, response, next) => {
   const authorization = request.headers.authorization || ''
@@ -517,5 +541,55 @@ app.delete('/api/courses/:id', requireAuth, async (request, response) => {
     response.json({ message: 'Course deleted successfully.' })
   } catch (error) {
     response.status(500).json({ message: error.message })
+  }
+})
+
+app.post('/api/auth/google', async (request, response) => {
+  const credential = typeof request.body.credential === 'string' ? request.body.credential : ''
+
+  if (!googleClientId) {
+    return response.status(503).json({ message: 'Google authentication is not configured on the server.' })
+  }
+
+  if (!credential) {
+    return response.status(400).json({ message: 'Google credential is required.' })
+  }
+
+  try {
+    const ticket = await googleClient.verifyIdToken({ idToken: credential, audience: googleClientId })
+    const payload = ticket.getPayload()
+    const googleId = payload?.sub
+    const email = payload?.email?.trim().toLowerCase()
+    const name = payload?.name?.trim() || email?.split('@')[0]
+
+    if (!googleId || !email || payload.email_verified !== true) {
+      return response.status(401).json({ message: 'Google account could not be verified.' })
+    }
+
+    let user = isDatabaseConnected()
+      ? await User.findOne({ $or: [{ googleId }, { email }] }).select('+passwordHash +googleId')
+      : users.find((item) => item.googleId === googleId || item.email === email)
+
+    if (user) {
+      if (isDatabaseConnected() && !user.googleId) {
+        user.googleId = googleId
+        await user.save()
+      } else if (!isDatabaseConnected()) {
+        user.googleId = googleId
+      }
+    } else {
+      const username = await createUniqueUsername(email)
+      const passwordHash = await createPasswordHash(randomBytes(32).toString('hex'))
+      user = isDatabaseConnected()
+        ? await User.create({ name, username, email, googleId, passwordHash, role: 'student' })
+        : { _id: `local-${Date.now()}`, name, username, email, googleId, passwordHash, role: 'student', enrolledCourses: [] }
+
+      if (!isDatabaseConnected()) users.unshift(user)
+    }
+
+    const token = createAuthToken(user._id)
+    response.json({ token, user: serializeUser(user) })
+  } catch (error) {
+    response.status(401).json({ message: 'Google authentication failed.' })
   }
 })

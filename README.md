@@ -51,6 +51,18 @@ If a MongoDB connection string is set in an environment variable, the app stores
 
 4. Open the React app in the browser and use the course form to create records.
 
+## Google Sign-In Setup
+
+1. Open Google Cloud Console and create or select a project.
+2. Go to **APIs & Services > OAuth consent screen**, configure the app, and add your Google account as a test user if the app is in testing mode.
+3. Go to **APIs & Services > Credentials > Create Credentials > OAuth client ID**.
+4. Choose **Web application** and add `http://localhost:5173` to **Authorized JavaScript origins**.
+5. Copy the web client ID into both `.env` at the project root as `GOOGLE_CLIENT_ID` and `client/.env` as `VITE_GOOGLE_CLIENT_ID`.
+6. Start the backend with `npm run server` and the frontend with `cd client && npm run dev`.
+7. Open `http://localhost:5173` and use the Google button on the sign-in screen.
+
+The backend verifies the Google ID token before creating or linking a local user and issuing the same JWT used by the existing course API. Never commit either `.env` file; `.env.example` files are provided as templates.
+
 ## API Example
 
 POST http://localhost:5000/api/courses

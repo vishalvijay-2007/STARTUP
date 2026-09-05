@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
@@ -16,6 +16,48 @@ const initialAuthForm = {
   password: '',
 }
 
+function GoogleSignIn({ clientId, onCredential }) {
+  const buttonRef = useRef(null)
+  const callbackRef = useRef(onCredential)
+
+  useEffect(() => {
+    callbackRef.current = onCredential
+  }, [onCredential])
+
+  useEffect(() => {
+    if (!clientId) return undefined
+
+    const renderButton = () => {
+      if (!window.google || !buttonRef.current) return
+      window.google.accounts.id.initialize({ client_id: clientId, callback: (response) => callbackRef.current(response) })
+      window.google.accounts.id.renderButton(buttonRef.current, {
+        theme: 'outline',
+        size: 'large',
+        width: 320,
+        text: 'continue_with',
+      })
+    }
+
+    const existingScript = document.querySelector('script[src="https://accounts.google.com/gsi/client"]')
+    if (existingScript) {
+      renderButton()
+      return undefined
+    }
+
+    const script = document.createElement('script')
+    script.src = 'https://accounts.google.com/gsi/client'
+    script.async = true
+    script.defer = true
+    script.onload = renderButton
+    document.head.appendChild(script)
+
+    return () => script.remove()
+  }, [clientId])
+
+  if (!clientId) return <p className="config-text">Google sign-in needs VITE_GOOGLE_CLIENT_ID.</p>
+  return <div ref={buttonRef} className="google-sign-in" />
+}
+
 function App() {
   const [form, setForm] = useState(initialForm)
   const [courses, setCourses] = useState([])
@@ -26,6 +68,7 @@ function App() {
   const [authMode, setAuthMode] = useState('login')
   const [authForm, setAuthForm] = useState(initialAuthForm)
   const [authStatus, setAuthStatus] = useState('')
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 
   const apiRequest = (url, options = {}) =>
     fetch(url, {
@@ -95,6 +138,31 @@ function App() {
       setUser(result.user)
       setAuthForm(initialAuthForm)
       setAuthStatus('')
+      await fetchCourses()
+    } catch (error) {
+      setAuthStatus(error.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleGoogleCredential = async (response) => {
+    setLoading(true)
+    setAuthStatus('')
+
+    try {
+      const result = await fetch(`${API_BASE_URL}/auth/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential: response.credential }),
+      }).then(async (apiResponse) => {
+        const data = await apiResponse.json()
+        if (!apiResponse.ok) throw new Error(data.message || 'Google authentication failed.')
+        return data
+      })
+
+      localStorage.setItem('authToken', result.token)
+      setUser(result.user)
       await fetchCourses()
     } catch (error) {
       setAuthStatus(error.message)
@@ -218,6 +286,8 @@ function App() {
             <button type="submit" disabled={loading}>{loading ? 'Please wait...' : authMode === 'login' ? 'Sign in' : 'Create account'}</button>
             {authStatus && <p className="error-text">{authStatus}</p>}
           </form>
+          <div className="auth-divider"><span>or</span></div>
+          <GoogleSignIn clientId={googleClientId} onCredential={handleGoogleCredential} />
           <button type="button" className="link-btn" onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setAuthStatus('') }}>
             {authMode === 'login' ? 'Need an account? Register' : 'Already registered? Sign in'}
           </button>
