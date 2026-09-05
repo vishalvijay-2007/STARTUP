@@ -39,6 +39,22 @@ app.get('/api/courses', async (_request, response) => {
   }
 })
 
+app.get('/api/courses/:id', async (request, response) => {
+  try {
+    const course = isDatabaseConnected()
+      ? await Course.findById(request.params.id).lean()
+      : courses.find((item) => item._id === request.params.id)
+
+    if (!course) {
+      return response.status(404).json({ message: 'Course not found.' })
+    }
+
+    response.json(course)
+  } catch (error) {
+    response.status(500).json({ message: error.message })
+  }
+})
+
 app.post('/api/courses', async (request, response) => {
   const { title, category, description, hours } = request.body
 
