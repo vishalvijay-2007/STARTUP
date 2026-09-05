@@ -75,6 +75,57 @@ const isValidResourceId = (id) => !isDatabaseConnected() || mongoose.isValidObje
 const normalizeUsername = (username) =>
   typeof username === 'string' ? username.trim().toLowerCase() : ''
 
+const fallbackCourseSuggestion = ({ title = '', category = '', description = '' }) => {
+  const normalizedTitle = title.trim()
+  const normalizedCategory = category.trim()
+  const topic = normalizedTitle || normalizedCategory || 'startup growth'
+
+  return {
+    title: normalizedTitle || `Practical ${topic} for Founders`,
+    category: normalizedCategory || 'Startup Operations',
+    description:
+      description.trim() ||
+      `Build practical ${topic.toLowerCase()} skills through focused lessons, examples, and an action plan for your startup team.`,
+    hours: 6,
+  }
+}
+
+const generateCourseSuggestion = async (input) => {
+  const apiKey = process.env.OPENAI_API_KEY
+  if (!apiKey) return fallbackCourseSuggestion(input)
+
+  const response = await fetch(process.env.OPENAI_API_URL || 'https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+      temperature: 0.4,
+      response_format: { type: 'json_object' },
+      messages: [
+        {
+          role: 'system',
+          content: 'Create a concise startup course suggestion. Return only JSON with title, category, description, and integer hours from 1 to 40.',
+        },
+        { role: 'user', content: JSON.stringify(input) },
+      ],
+    }),
+  })
+
+  if (!response.ok) throw new Error('AI suggestion service is unavailable.')
+  const result = await response.json()
+  const suggestion = JSON.parse(result.choices?.[0]?.message?.content || '{}')
+
+  return {
+    title: String(suggestion.title || '').trim(),
+    category: String(suggestion.category || '').trim(),
+    description: String(suggestion.description || '').trim(),
+    hours: Math.min(40, Math.max(1, Number.parseInt(suggestion.hours, 10) || 6)),
+  }
+}
+
 const createPasswordHash = async (password) => {
   const salt = randomBytes(16).toString('hex')
   const derivedKey = await scrypt(password, salt, 64)
@@ -235,6 +286,20 @@ app.get('/api/courses', requireAuth, async (_request, response) => {
     response.json(result)
   } catch (error) {
     response.status(500).json({ message: error.message })
+  }
+})
+
+app.post('/api/ai/course-suggestions', requireAuth, async (request, response) => {
+  const input = {
+    title: typeof request.body.title === 'string' ? request.body.title : '',
+    category: typeof request.body.category === 'string' ? request.body.category : '',
+    description: typeof request.body.description === 'string' ? request.body.description : '',
+  }
+
+  try {
+    response.json({ suggestion: await generateCourseSuggestion(input) })
+  } catch (error) {
+    response.status(502).json({ message: error.message })
   }
 })
 
@@ -630,6 +695,8 @@ export {
   app,
   createPasswordHash,
   createUniqueUsername,
+  fallbackCourseSuggestion,
+  generateCourseSuggestion,
   isValidResourceId,
   normalizeUsername,
   requireAuth,

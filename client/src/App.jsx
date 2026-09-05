@@ -70,6 +70,7 @@ function App() {
   const [authMode, setAuthMode] = useState('login')
   const [authForm, setAuthForm] = useState(initialAuthForm)
   const [authStatus, setAuthStatus] = useState('')
+  const [aiLoading, setAiLoading] = useState(false)
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 
   const apiRequest = (url, options = {}) =>
@@ -197,6 +198,31 @@ function App() {
     setStatus('Ready to add a course.')
   }
 
+  const handleAiSuggest = async () => {
+    setAiLoading(true)
+    setStatus('Creating an AI course suggestion...')
+
+    try {
+      const response = await apiRequest(`${API_BASE_URL}/ai/course-suggestions`, {
+        method: 'POST',
+        body: JSON.stringify({
+          title: form.title,
+          category: form.category,
+          description: form.description,
+        }),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.message || 'AI suggestion could not be created.')
+
+      setForm((currentForm) => ({ ...currentForm, ...result.suggestion }))
+      setStatus('AI suggestion added. Review it before saving.')
+    } catch (error) {
+      setStatus(error.message)
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
   const handleSubmit = async (event) => {
     event.preventDefault()
     setLoading(true)
@@ -314,7 +340,13 @@ function App() {
 
       <main className="content-grid">
         <section className="panel form-panel">
-          <h2>{editingCourseId ? 'Edit course' : 'Add a new course'}</h2>
+          <div className="form-heading">
+            <h2>{editingCourseId ? 'Edit course' : 'Add a new course'}</h2>
+            <button type="button" className="ai-btn" onClick={handleAiSuggest} disabled={loading || aiLoading}>
+              {aiLoading ? 'Thinking...' : 'Suggest with AI'}
+            </button>
+          </div>
+          <p className="ai-hint">Start with a topic, or let AI draft the course details for you.</p>
           <form onSubmit={handleSubmit} className="course-form">
             <label>
               Course title
