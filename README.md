@@ -117,13 +117,13 @@ docker build --build-arg VITE_API_URL=https://your-api.example.com/api -t startu
 ```
 
 ## Deployment Links
-- Frontend: https://vishalvijay-2007.github.io/STARTUP/
+- Frontend: GitHub Pages workflow is configured in [.github/workflows/deploy-frontend.yml](.github/workflows/deploy-frontend.yml), but no public deployment is currently verified. Enable Pages with GitHub Actions on `main`, then add the generated URL here.
 - Repository: https://github.com/vishalvijay-2007/STARTUP
-- Backend health check: Configure and add the public API URL here after deploying the Docker image or Node server.
-- Pull request: Add the public URL after opening `feature/final-project-submission` into `main`.
-- Walkthrough video: Add the public Google Drive URL after uploading the 5-8 minute recording and verifying incognito access.
+- Backend health check: No public backend is currently configured. Deploy the Docker image or Node server with `MONGODB_URI` and `JWT_SECRET`, then verify `/api/health` and add the URL here.
+- Pull request: Open `feature/final-project-submission` into `main` after pushing the final commit.
+- Walkthrough video: Upload the 5-8 minute recording to Google Drive, set access to "Anyone with the link", verify it in an incognito window, and add the URL here.
 
-The GitHub Pages workflow builds the frontend from `main`. GitHub Pages cannot host the Express API, so authenticated workflows require a separately deployed backend and a matching `VITE_API_URL` build/deployment variable.
+The GitHub Pages workflow builds the frontend from `main`. GitHub Pages cannot host the Express API, so authenticated workflows require a separately deployed backend and a matching `VITE_API_URL` build/deployment variable. The Docker deployment serves both client and API from one process.
 
 ## Folder Structure
 ```text
