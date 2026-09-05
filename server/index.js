@@ -36,6 +36,8 @@ const User = mongoose.model('User', userSchema)
 
 const isDatabaseConnected = () => mongoose.connection.readyState === 1
 
+const isValidResourceId = (id) => !isDatabaseConnected() || mongoose.isValidObjectId(id)
+
 app.get('/api/health', (_request, response) => {
   response.json({ ok: true, database: isDatabaseConnected() ? 'mongodb' : 'memory' })
 })
@@ -151,4 +153,131 @@ app.listen(port, async () => {
     }
   }
   console.log(`API running at http://localhost:${port}`)
+})
+
+app.put('/api/courses/:id', async (request, response) => {
+  const { title, category, description, hours } = request.body
+  const courseTitle = typeof title === 'string' ? title.trim() : ''
+  const courseCategory = typeof category === 'string' ? category.trim() : ''
+  const courseDescription = typeof description === 'string' ? description.trim() : ''
+  const courseHours = Number(hours)
+
+  if (
+    !courseTitle ||
+    !courseCategory ||
+    !courseDescription ||
+    !Number.isInteger(courseHours) ||
+    courseHours < 1
+  ) {
+    return response.status(400).json({
+      message: 'Title, category, description, and positive whole-number hours are required.',
+    })
+  }
+
+  if (!isValidResourceId(request.params.id)) {
+    return response.status(404).json({ message: 'Course not found.' })
+  }
+
+  try {
+    if (isDatabaseConnected()) {
+      const course = await Course.findByIdAndUpdate(
+        request.params.id,
+        {
+          title: courseTitle,
+          category: courseCategory,
+          description: courseDescription,
+          hours: courseHours,
+        },
+        { new: true, runValidators: true },
+      ).lean()
+
+      if (!course) {
+        return response.status(404).json({ message: 'Course not found.' })
+      }
+
+      return response.json(course)
+    }
+
+    const courseIndex = courses.findIndex((item) => item._id === request.params.id)
+    if (courseIndex === -1) {
+      return response.status(404).json({ message: 'Course not found.' })
+    }
+
+    courses[courseIndex] = {
+      ...courses[courseIndex],
+      title: courseTitle,
+      category: courseCategory,
+      description: courseDescription,
+      hours: courseHours,
+    }
+
+    response.json(courses[courseIndex])
+  } catch (error) {
+    response.status(500).json({ message: error.message })
+  }
+})
+
+app.put('/api/users/:id', async (request, response) => {
+  const { name, email, role } = request.body
+  const userName = typeof name === 'string' ? name.trim() : ''
+  const userEmail = typeof email === 'string' ? email.trim().toLowerCase() : ''
+  const userRole = role || 'student'
+
+  if (!userName || !/^\S+@\S+\.\S+$/.test(userEmail) || !['student', 'admin'].includes(userRole)) {
+    return response.status(400).json({
+      message: 'Name, a valid email, and a supported role are required.',
+    })
+  }
+
+  if (!isValidResourceId(request.params.id)) {
+    return response.status(404).json({ message: 'User not found.' })
+  }
+
+  try {
+    if (isDatabaseConnected()) {
+      const existingUser = await User.findOne({
+        email: userEmail,
+        _id: { $ne: request.params.id },
+      }).lean()
+
+      if (existingUser) {
+        return response.status(409).json({ message: 'A user with this email already exists.' })
+      }
+
+      const user = await User.findByIdAndUpdate(
+        request.params.id,
+        { name: userName, email: userEmail, role: userRole },
+        { new: true, runValidators: true },
+      ).lean()
+
+      if (!user) {
+        return response.status(404).json({ message: 'User not found.' })
+      }
+
+      return response.json(user)
+    }
+
+    const userIndex = users.findIndex((item) => item._id === request.params.id)
+    if (userIndex === -1) {
+      return response.status(404).json({ message: 'User not found.' })
+    }
+
+    const duplicateUser = users.find(
+      (item) => item.email === userEmail && item._id !== request.params.id,
+    )
+    if (duplicateUser) {
+      return response.status(409).json({ message: 'A user with this email already exists.' })
+    }
+
+    users[userIndex] = {
+      ...users[userIndex],
+      name: userName,
+      email: userEmail,
+      role: userRole,
+    }
+
+    response.json(users[userIndex])
+  } catch (error) {
+    response.status(500).json({ message: error.message })
+  }
 })
