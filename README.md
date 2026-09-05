@@ -36,6 +36,8 @@ the deleted course from every user's enrollment list.
 
 If a MongoDB connection string is set in an environment variable, the app stores records in MongoDB. Otherwise it falls back to in-memory storage so the project can still run locally without a database.
 
+Course create and update requests use `multipart/form-data` and accept an optional `file` field. Files up to 10MB are stored locally in `server/uploads` and are returned as `fileUrl` and `fileName` fields.
+
 ## Run Locally
 
 1. Install dependencies at the root:
