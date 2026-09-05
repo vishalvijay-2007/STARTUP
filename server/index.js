@@ -3,14 +3,15 @@ import { promisify } from 'node:util'
 import { randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto'
 import cors from 'cors'
 import express from 'express'
+import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
 
 const app = express()
 const port = process.env.PORT || 5000
 const courses = []
 const users = []
-const sessions = new Map()
 const scrypt = promisify(scryptCallback)
+const jwtSecret = process.env.JWT_SECRET || 'local-development-jwt-secret'
 
 app.use(cors())
 app.use(express.json())
@@ -72,13 +73,16 @@ const serializeUser = (user) => ({
   role: user.role,
 })
 
-const requireAuth = async (request, response, next) => {
-  const token = request.headers.authorization?.replace('Bearer ', '')
-  const userId = token ? sessions.get(token) : null
+const createAuthToken = (userId) => jwt.sign({}, jwtSecret, { subject: String(userId), expiresIn: '1h' })
 
-  if (!userId) return response.status(401).json({ message: 'Authentication required.' })
+const requireAuth = async (request, response, next) => {
+  const authorization = request.headers.authorization || ''
+  const token = authorization.startsWith('Bearer ') ? authorization.slice(7) : ''
+
+  if (!token) return response.status(401).json({ message: 'Authentication required.' })
 
   try {
+    const { sub: userId } = jwt.verify(token, jwtSecret)
     request.user = isDatabaseConnected()
       ? await User.findById(userId).lean()
       : users.find((user) => user._id === userId)
@@ -86,6 +90,10 @@ const requireAuth = async (request, response, next) => {
     if (!request.user) return response.status(401).json({ message: 'Session is invalid.' })
     next()
   } catch (error) {
+    if (error instanceof jwt.JsonWebTokenError || error instanceof jwt.TokenExpiredError) {
+      return response.status(401).json({ message: 'Session is invalid or expired.' })
+    }
+
     response.status(500).json({ message: error.message })
   }
 }
@@ -139,8 +147,7 @@ app.post('/api/auth/register', async (request, response) => {
         }
 
     if (!isDatabaseConnected()) users.unshift(user)
-    const token = randomBytes(32).toString('hex')
-    sessions.set(token, user._id)
+    const token = createAuthToken(user._id)
     response.status(201).json({ token, user: serializeUser(user) })
   } catch (error) {
     response.status(500).json({ message: error.message })
@@ -164,8 +171,7 @@ app.post('/api/auth/login', async (request, response) => {
       return response.status(401).json({ message: 'Invalid username or password.' })
     }
 
-    const token = randomBytes(32).toString('hex')
-    sessions.set(token, user._id)
+    const token = createAuthToken(user._id)
     response.json({ token, user: serializeUser(user) })
   } catch (error) {
     response.status(500).json({ message: error.message })
