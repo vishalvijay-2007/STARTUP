@@ -6,6 +6,7 @@ import mongoose from 'mongoose'
 const app = express()
 const port = process.env.PORT || 5000
 const courses = []
+const users = []
 
 app.use(cors())
 app.use(express.json())
@@ -21,6 +22,17 @@ const courseSchema = new mongoose.Schema(
 )
 
 const Course = mongoose.model('Course', courseSchema)
+
+const userSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, trim: true },
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    role: { type: String, enum: ['student', 'admin'], default: 'student' },
+  },
+  { timestamps: true },
+)
+
+const User = mongoose.model('User', userSchema)
 
 const isDatabaseConnected = () => mongoose.connection.readyState === 1
 
@@ -57,18 +69,73 @@ app.get('/api/courses/:id', async (request, response) => {
 
 app.post('/api/courses', async (request, response) => {
   const { title, category, description, hours } = request.body
+  const courseTitle = typeof title === 'string' ? title.trim() : ''
+  const courseCategory = typeof category === 'string' ? category.trim() : ''
+  const courseDescription = typeof description === 'string' ? description.trim() : ''
+  const courseHours = Number(hours)
 
-  if (!title || !category || !description || !Number(hours)) {
-    return response.status(400).json({ message: 'All course fields are required.' })
+  if (
+    !courseTitle ||
+    !courseCategory ||
+    !courseDescription ||
+    !Number.isInteger(courseHours) ||
+    courseHours < 1
+  ) {
+    return response.status(400).json({
+      message: 'Title, category, description, and positive whole-number hours are required.',
+    })
   }
 
   try {
     const course = isDatabaseConnected()
-      ? await Course.create({ title, category, description, hours: Number(hours) })
-      : { _id: `local-${Date.now()}`, title, category, description, hours: Number(hours) }
+      ? await Course.create({
+          title: courseTitle,
+          category: courseCategory,
+          description: courseDescription,
+          hours: courseHours,
+        })
+      : {
+          _id: `local-${Date.now()}`,
+          title: courseTitle,
+          category: courseCategory,
+          description: courseDescription,
+          hours: courseHours,
+        }
 
     if (!isDatabaseConnected()) courses.unshift(course)
     response.status(201).json(course)
+  } catch (error) {
+    response.status(500).json({ message: error.message })
+  }
+})
+
+app.post('/api/users', async (request, response) => {
+  const { name, email, role } = request.body
+  const userName = typeof name === 'string' ? name.trim() : ''
+  const userEmail = typeof email === 'string' ? email.trim().toLowerCase() : ''
+  const userRole = role || 'student'
+
+  if (!userName || !/^\S+@\S+\.\S+$/.test(userEmail) || !['student', 'admin'].includes(userRole)) {
+    return response.status(400).json({
+      message: 'Name, a valid email, and a supported role are required.',
+    })
+  }
+
+  try {
+    const existingUser = isDatabaseConnected()
+      ? await User.findOne({ email: userEmail }).lean()
+      : users.find((item) => item.email === userEmail)
+
+    if (existingUser) {
+      return response.status(409).json({ message: 'A user with this email already exists.' })
+    }
+
+    const user = isDatabaseConnected()
+      ? await User.create({ name: userName, email: userEmail, role: userRole })
+      : { _id: `local-${Date.now()}`, name: userName, email: userEmail, role: userRole }
+
+    if (!isDatabaseConnected()) users.unshift(user)
+    response.status(201).json(user)
   } catch (error) {
     response.status(500).json({ message: error.message })
   }
