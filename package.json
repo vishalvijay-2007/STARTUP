@@ -1,5 +1,15 @@
 {
+  "name": "startup-management-platform",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "server": "node server/index.js",
+    "dev": "npm run server"
+  },
   "dependencies": {
-    "mongoose": "^9.9.1"
+    "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
+    "express": "^5.1.0",
+    "mongoose": "^9.9.4"
   }
 }
