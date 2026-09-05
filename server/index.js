@@ -15,6 +15,10 @@ const port = process.env.PORT || 5000
 const courses = []
 const users = []
 const scrypt = promisify(scryptCallback)
+const isProduction = process.env.NODE_ENV === 'production'
+if (isProduction && !process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET must be configured in production.')
+}
 const jwtSecret = process.env.JWT_SECRET || 'local-development-jwt-secret'
 const googleClientId = process.env.GOOGLE_CLIENT_ID || ''
 const googleClient = new OAuth2Client(googleClientId)
