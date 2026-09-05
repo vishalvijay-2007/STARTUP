@@ -17,6 +17,7 @@ const courseSchema = new mongoose.Schema(
     category: { type: String, required: true, trim: true },
     description: { type: String, required: true, trim: true },
     hours: { type: Number, required: true, min: 1 },
+    students: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   },
   { timestamps: true },
 )
@@ -28,6 +29,7 @@ const userSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     role: { type: String, enum: ['student', 'admin'], default: 'student' },
+    enrolledCourses: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Course' }],
   },
   { timestamps: true },
 )
@@ -102,6 +104,7 @@ app.post('/api/courses', async (request, response) => {
           category: courseCategory,
           description: courseDescription,
           hours: courseHours,
+          students: [],
         }
 
     if (!isDatabaseConnected()) courses.unshift(course)
@@ -134,9 +137,124 @@ app.post('/api/users', async (request, response) => {
 
     const user = isDatabaseConnected()
       ? await User.create({ name: userName, email: userEmail, role: userRole })
-      : { _id: `local-${Date.now()}`, name: userName, email: userEmail, role: userRole }
+      : {
+          _id: `local-${Date.now()}`,
+          name: userName,
+          email: userEmail,
+          role: userRole,
+          enrolledCourses: [],
+        }
 
     if (!isDatabaseConnected()) users.unshift(user)
+
+app.get('/api/users/:id/courses', async (request, response) => {
+  if (!isValidResourceId(request.params.id)) {
+    return response.status(404).json({ message: 'User not found.' })
+  }
+
+  try {
+    if (isDatabaseConnected()) {
+      const user = await User.findById(request.params.id).populate('enrolledCourses').lean()
+
+      if (!user) {
+        return response.status(404).json({ message: 'User not found.' })
+      }
+
+      return response.json(user.enrolledCourses)
+    }
+
+    const user = users.find((item) => item._id === request.params.id)
+    if (!user) {
+      return response.status(404).json({ message: 'User not found.' })
+    }
+
+    response.json(
+      user.enrolledCourses
+        .map((courseId) => courses.find((course) => course._id === courseId))
+        .filter(Boolean),
+    )
+  } catch (error) {
+    response.status(500).json({ message: error.message })
+  }
+})
+
+app.post('/api/users/:userId/courses/:courseId', async (request, response) => {
+  const { userId, courseId } = request.params
+
+  if (!isValidResourceId(userId) || !isValidResourceId(courseId)) {
+    return response.status(404).json({ message: 'User or course not found.' })
+  }
+
+  try {
+    if (isDatabaseConnected()) {
+      const [user, course] = await Promise.all([
+        User.findById(userId).lean(),
+        Course.findById(courseId).lean(),
+      ])
+
+      if (!user || !course) {
+        return response.status(404).json({ message: 'User or course not found.' })
+      }
+
+      await Promise.all([
+        User.updateOne({ _id: userId }, { $addToSet: { enrolledCourses: courseId } }),
+        Course.updateOne({ _id: courseId }, { $addToSet: { students: userId } }),
+      ])
+      return response.status(201).json({ message: 'User enrolled in course successfully.' })
+    }
+
+    const user = users.find((item) => item._id === userId)
+    const course = courses.find((item) => item._id === courseId)
+    if (!user || !course) {
+      return response.status(404).json({ message: 'User or course not found.' })
+    }
+
+    if (!user.enrolledCourses.includes(courseId)) user.enrolledCourses.push(courseId)
+    if (!course.students.includes(userId)) course.students.push(userId)
+    response.status(201).json({ message: 'User enrolled in course successfully.' })
+  } catch (error) {
+    response.status(500).json({ message: error.message })
+  }
+})
+
+app.delete('/api/users/:userId/courses/:courseId', async (request, response) => {
+  const { userId, courseId } = request.params
+
+  if (!isValidResourceId(userId) || !isValidResourceId(courseId)) {
+    return response.status(404).json({ message: 'User or course not found.' })
+  }
+
+  try {
+    if (isDatabaseConnected()) {
+      const [user, course] = await Promise.all([
+        User.findById(userId).lean(),
+        Course.findById(courseId).lean(),
+      ])
+
+      if (!user || !course) {
+        return response.status(404).json({ message: 'User or course not found.' })
+      }
+
+      await Promise.all([
+        User.updateOne({ _id: userId }, { $pull: { enrolledCourses: courseId } }),
+        Course.updateOne({ _id: courseId }, { $pull: { students: userId } }),
+      ])
+      return response.json({ message: 'User unenrolled from course successfully.' })
+    }
+
+    const user = users.find((item) => item._id === userId)
+    const course = courses.find((item) => item._id === courseId)
+    if (!user || !course) {
+      return response.status(404).json({ message: 'User or course not found.' })
+    }
+
+    user.enrolledCourses = user.enrolledCourses.filter((id) => id !== courseId)
+    course.students = course.students.filter((id) => id !== userId)
+    response.json({ message: 'User unenrolled from course successfully.' })
+  } catch (error) {
+    response.status(500).json({ message: error.message })
+  }
+})
     response.status(201).json(user)
   } catch (error) {
     response.status(500).json({ message: error.message })
@@ -295,6 +413,7 @@ app.delete('/api/courses/:id', async (request, response) => {
         return response.status(404).json({ message: 'Course not found.' })
       }
 
+      await User.updateMany({}, { $pull: { enrolledCourses: request.params.id } })
       return response.json({ message: 'Course deleted successfully.' })
     }
 
@@ -304,6 +423,9 @@ app.delete('/api/courses/:id', async (request, response) => {
     }
 
     courses.splice(courseIndex, 1)
+    users.forEach((user) => {
+      user.enrolledCourses = user.enrolledCourses.filter((id) => id !== request.params.id)
+    })
     response.json({ message: 'Course deleted successfully.' })
   } catch (error) {
     response.status(500).json({ message: error.message })
