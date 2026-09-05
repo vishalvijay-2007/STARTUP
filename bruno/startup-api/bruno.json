@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "startup-api",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}
