@@ -9,16 +9,39 @@ const initialForm = {
   hours: '',
 }
 
+const initialAuthForm = {
+  name: '',
+  username: '',
+  email: '',
+  password: '',
+}
+
 function App() {
   const [form, setForm] = useState(initialForm)
   const [courses, setCourses] = useState([])
   const [editingCourseId, setEditingCourseId] = useState(null)
   const [status, setStatus] = useState('Loading courses...')
   const [loading, setLoading] = useState(false)
+  const [user, setUser] = useState(null)
+  const [authMode, setAuthMode] = useState('login')
+  const [authForm, setAuthForm] = useState(initialAuthForm)
+  const [authStatus, setAuthStatus] = useState('')
+
+  const apiRequest = (url, options = {}) =>
+    fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(localStorage.getItem('authToken')
+          ? { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
+          : {}),
+        ...options.headers,
+      },
+    })
 
   const fetchCourses = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/courses`)
+      const response = await apiRequest(`${API_BASE_URL}/courses`)
       if (!response.ok) {
         throw new Error('Unable to fetch courses')
       }
@@ -32,12 +55,59 @@ function App() {
   }
 
   useEffect(() => {
-    fetchCourses()
+    const token = localStorage.getItem('authToken')
+    if (!token) return
+
+    apiRequest(`${API_BASE_URL}/auth/me`)
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Session expired.')
+        const result = await response.json()
+        setUser(result.user)
+        await fetchCourses()
+      })
+      .catch(() => localStorage.removeItem('authToken'))
   }, [])
 
   const handleChange = (event) => {
     const { name, value } = event.target
     setForm((currentForm) => ({ ...currentForm, [name]: value }))
+  }
+
+  const handleAuthChange = (event) => {
+    const { name, value } = event.target
+    setAuthForm((currentForm) => ({ ...currentForm, [name]: value }))
+  }
+
+  const handleAuthSubmit = async (event) => {
+    event.preventDefault()
+    setLoading(true)
+    setAuthStatus('')
+
+    try {
+      const response = await apiRequest(`${API_BASE_URL}/auth/${authMode}`, {
+        method: 'POST',
+        body: JSON.stringify(authForm),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.message || 'Authentication failed.')
+
+      localStorage.setItem('authToken', result.token)
+      setUser(result.user)
+      setAuthForm(initialAuthForm)
+      setAuthStatus('')
+      await fetchCourses()
+    } catch (error) {
+      setAuthStatus(error.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const logout = () => {
+    localStorage.removeItem('authToken')
+    setUser(null)
+    setCourses([])
+    setStatus('')
   }
 
   const startEditing = (course) => {
@@ -62,7 +132,7 @@ function App() {
     setLoading(true)
 
     try {
-      const response = await fetch(
+      const response = await apiRequest(
         `${API_BASE_URL}/courses${editingCourseId ? `/${editingCourseId}` : ''}`,
         {
           method: editingCourseId ? 'PUT' : 'POST',
@@ -98,7 +168,7 @@ function App() {
 
     setLoading(true)
     try {
-      const response = await fetch(`${API_BASE_URL}/courses/${course._id}`, {
+      const response = await apiRequest(`${API_BASE_URL}/courses/${course._id}`, {
         method: 'DELETE',
       })
       const result = await response.json()
@@ -117,6 +187,45 @@ function App() {
     }
   }
 
+  if (!user) {
+    return (
+      <main className="auth-shell">
+        <section className="panel auth-panel">
+          <p className="eyebrow">Startup Management</p>
+          <h1>{authMode === 'login' ? 'Welcome back' : 'Create your account'}</h1>
+          <p className="auth-intro">Sign in to manage your startup learning courses.</p>
+          <form onSubmit={handleAuthSubmit} className="course-form">
+            {authMode === 'register' && (
+              <label>
+                Full name
+                <input name="name" value={authForm.name} onChange={handleAuthChange} required />
+              </label>
+            )}
+            <label>
+              Username
+              <input name="username" value={authForm.username} onChange={handleAuthChange} minLength="3" required />
+            </label>
+            {authMode === 'register' && (
+              <label>
+                Email
+                <input type="email" name="email" value={authForm.email} onChange={handleAuthChange} required />
+              </label>
+            )}
+            <label>
+              Password
+              <input type="password" name="password" value={authForm.password} onChange={handleAuthChange} minLength="8" required />
+            </label>
+            <button type="submit" disabled={loading}>{loading ? 'Please wait...' : authMode === 'login' ? 'Sign in' : 'Create account'}</button>
+            {authStatus && <p className="error-text">{authStatus}</p>}
+          </form>
+          <button type="button" className="link-btn" onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setAuthStatus('') }}>
+            {authMode === 'login' ? 'Need an account? Register' : 'Already registered? Sign in'}
+          </button>
+        </section>
+      </main>
+    )
+  }
+
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -124,7 +233,10 @@ function App() {
           <p className="eyebrow">Startup Management</p>
           <h1>Course Portal</h1>
         </div>
-        <div className="status-badge">API Connected</div>
+        <div className="topbar-actions">
+          <span className="status-badge">@{user.username}</span>
+          <button type="button" className="logout-btn" onClick={logout}>Log out</button>
+        </div>
       </header>
 
       <main className="content-grid">
