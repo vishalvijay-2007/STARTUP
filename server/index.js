@@ -281,3 +281,31 @@ app.put('/api/users/:id', async (request, response) => {
     response.status(500).json({ message: error.message })
   }
 })
+
+app.delete('/api/courses/:id', async (request, response) => {
+  if (!isValidResourceId(request.params.id)) {
+    return response.status(404).json({ message: 'Course not found.' })
+  }
+
+  try {
+    if (isDatabaseConnected()) {
+      const course = await Course.findByIdAndDelete(request.params.id).lean()
+
+      if (!course) {
+        return response.status(404).json({ message: 'Course not found.' })
+      }
+
+      return response.json({ message: 'Course deleted successfully.' })
+    }
+
+    const courseIndex = courses.findIndex((item) => item._id === request.params.id)
+    if (courseIndex === -1) {
+      return response.status(404).json({ message: 'Course not found.' })
+    }
+
+    courses.splice(courseIndex, 1)
+    response.json({ message: 'Course deleted successfully.' })
+  } catch (error) {
+    response.status(500).json({ message: error.message })
+  }
+})
