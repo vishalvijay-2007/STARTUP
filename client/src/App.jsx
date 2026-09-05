@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+const API_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, '')
 
 const initialForm = {
   title: '',
   category: '',
   description: '',
   hours: '',
+  file: null,
 }
 
 const initialAuthForm = {
@@ -74,7 +76,7 @@ function App() {
     fetch(url, {
       ...options,
       headers: {
-        'Content-Type': 'application/json',
+        ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
         ...(localStorage.getItem('authToken')
           ? { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
           : {}),
@@ -112,8 +114,8 @@ function App() {
   }, [])
 
   const handleChange = (event) => {
-    const { name, value } = event.target
-    setForm((currentForm) => ({ ...currentForm, [name]: value }))
+    const { name, value, files } = event.target
+    setForm((currentForm) => ({ ...currentForm, [name]: name === 'file' ? files[0] || null : value }))
   }
 
   const handleAuthChange = (event) => {
@@ -200,17 +202,18 @@ function App() {
     setLoading(true)
 
     try {
+      const courseData = new FormData()
+      courseData.append('title', form.title)
+      courseData.append('category', form.category)
+      courseData.append('description', form.description)
+      courseData.append('hours', String(Number(form.hours)))
+      if (form.file) courseData.append('file', form.file)
+
       const response = await apiRequest(
         `${API_BASE_URL}/courses${editingCourseId ? `/${editingCourseId}` : ''}`,
         {
           method: editingCourseId ? 'PUT' : 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            ...form,
-            hours: Number(form.hours),
-          }),
+          body: courseData,
         },
       )
 
@@ -361,6 +364,12 @@ function App() {
               />
             </label>
 
+            <label>
+              Course resource (optional, max 10MB)
+              <input type="file" name="file" onChange={handleChange} accept=".pdf,.doc,.docx,.ppt,.pptx,.zip,.txt" />
+              {form.file && <span className="file-name">Selected: {form.file.name}</span>}
+            </label>
+
             <button type="submit" disabled={loading}>
               {loading ? 'Saving...' : editingCourseId ? 'Update Course' : 'Save Course'}
             </button>
@@ -390,6 +399,11 @@ function App() {
                   <p className="meta">{course.category} | {course.hours} hours</p>
                 </div>
                 <p>{course.description}</p>
+                {course.fileUrl && (
+                  <a className="file-link" href={`${API_ORIGIN}${course.fileUrl}`} target="_blank" rel="noreferrer">
+                    Open resource: {course.fileName}
+                  </a>
+                )}
                 <div className="course-actions">
                   <button type="button" className="edit-btn" onClick={() => startEditing(course)} disabled={loading}>
                     Edit

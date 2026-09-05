@@ -1,4 +1,6 @@
 import 'dotenv/config'
+import { existsSync, mkdirSync } from 'node:fs'
+import { basename, extname, join } from 'node:path'
 import { promisify } from 'node:util'
 import { randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto'
 import cors from 'cors'
@@ -6,6 +8,7 @@ import express from 'express'
 import { OAuth2Client } from 'google-auth-library'
 import jwt from 'jsonwebtoken'
 import mongoose from 'mongoose'
+import multer from 'multer'
 
 const app = express()
 const port = process.env.PORT || 5000
@@ -15,9 +18,24 @@ const scrypt = promisify(scryptCallback)
 const jwtSecret = process.env.JWT_SECRET || 'local-development-jwt-secret'
 const googleClientId = process.env.GOOGLE_CLIENT_ID || ''
 const googleClient = new OAuth2Client(googleClientId)
+const uploadDirectory = join(process.cwd(), 'server', 'uploads')
+
+if (!existsSync(uploadDirectory)) mkdirSync(uploadDirectory, { recursive: true })
+
+const upload = multer({
+  limits: { fileSize: 10 * 1024 * 1024 },
+  storage: multer.diskStorage({
+    destination: uploadDirectory,
+    filename: (_request, file, callback) => {
+      const safeName = basename(file.originalname, extname(file.originalname)).replace(/[^a-z0-9-_]/gi, '-').slice(0, 60)
+      callback(null, `${Date.now()}-${safeName || 'course-file'}${extname(file.originalname).toLowerCase()}`)
+    },
+  }),
+})
 
 app.use(cors())
 app.use(express.json())
+app.use('/uploads', express.static(uploadDirectory))
 
 const courseSchema = new mongoose.Schema(
   {
@@ -25,6 +43,8 @@ const courseSchema = new mongoose.Schema(
     category: { type: String, required: true, trim: true },
     description: { type: String, required: true, trim: true },
     hours: { type: Number, required: true, min: 1 },
+    fileName: { type: String, trim: true },
+    fileUrl: { type: String, trim: true },
     students: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   },
   { timestamps: true },
@@ -233,7 +253,7 @@ app.get('/api/courses/:id', requireAuth, async (request, response) => {
   }
 })
 
-app.post('/api/courses', requireAuth, async (request, response) => {
+app.post('/api/courses', requireAuth, upload.single('file'), async (request, response) => {
   const { title, category, description, hours } = request.body
   const courseTitle = typeof title === 'string' ? title.trim() : ''
   const courseCategory = typeof category === 'string' ? category.trim() : ''
@@ -248,8 +268,22 @@ app.post('/api/courses', requireAuth, async (request, response) => {
 
   try {
     const course = isDatabaseConnected()
-      ? await Course.create({ title: courseTitle, category: courseCategory, description: courseDescription, hours: courseHours })
-      : { _id: `local-${Date.now()}`, title: courseTitle, category: courseCategory, description: courseDescription, hours: courseHours, students: [] }
+      ? await Course.create({
+          title: courseTitle,
+          category: courseCategory,
+          description: courseDescription,
+          hours: courseHours,
+          ...(request.file ? { fileName: request.file.originalname, fileUrl: `/uploads/${request.file.filename}` } : {}),
+        })
+      : {
+          _id: `local-${Date.now()}`,
+          title: courseTitle,
+          category: courseCategory,
+          description: courseDescription,
+          hours: courseHours,
+          ...(request.file ? { fileName: request.file.originalname, fileUrl: `/uploads/${request.file.filename}` } : {}),
+          students: [],
+        }
 
     if (!isDatabaseConnected()) courses.unshift(course)
     response.status(201).json(course)
@@ -385,7 +419,7 @@ app.listen(port, async () => {
   console.log(`API running at http://localhost:${port}`)
 })
 
-app.put('/api/courses/:id', requireAuth, async (request, response) => {
+app.put('/api/courses/:id', requireAuth, upload.single('file'), async (request, response) => {
   const { title, category, description, hours } = request.body
   const courseTitle = typeof title === 'string' ? title.trim() : ''
   const courseCategory = typeof category === 'string' ? category.trim() : ''
@@ -417,6 +451,7 @@ app.put('/api/courses/:id', requireAuth, async (request, response) => {
           category: courseCategory,
           description: courseDescription,
           hours: courseHours,
+          ...(request.file ? { fileName: request.file.originalname, fileUrl: `/uploads/${request.file.filename}` } : {}),
         },
         { new: true, runValidators: true },
       ).lean()
@@ -439,6 +474,7 @@ app.put('/api/courses/:id', requireAuth, async (request, response) => {
       category: courseCategory,
       description: courseDescription,
       hours: courseHours,
+      ...(request.file ? { fileName: request.file.originalname, fileUrl: `/uploads/${request.file.filename}` } : {}),
     }
 
     response.json(courses[courseIndex])
