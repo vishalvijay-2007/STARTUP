@@ -407,18 +407,6 @@ app.delete('/api/users/:userId/courses/:courseId', requireAuth, async (request, 
   }
 })
 
-app.listen(port, async () => {
-  if (process.env.MONGODB_URI) {
-    try {
-      await mongoose.connect(process.env.MONGODB_URI)
-      console.log('MongoDB connected')
-    } catch (error) {
-      console.warn(`MongoDB unavailable, using memory storage: ${error.message}`)
-    }
-  }
-  console.log(`API running at http://localhost:${port}`)
-})
-
 app.put('/api/courses/:id', requireAuth, upload.single('file'), async (request, response) => {
   const { title, category, description, hours } = request.body
   const courseTitle = typeof title === 'string' ? title.trim() : ''
@@ -629,3 +617,28 @@ app.post('/api/auth/google', async (request, response) => {
     response.status(401).json({ message: 'Google authentication failed.' })
   }
 })
+
+export {
+  app,
+  createPasswordHash,
+  createUniqueUsername,
+  isValidResourceId,
+  normalizeUsername,
+  requireAuth,
+  serializeUser,
+  verifyPassword,
+}
+
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(port, async () => {
+    if (process.env.MONGODB_URI) {
+      try {
+        await mongoose.connect(process.env.MONGODB_URI)
+        console.log('MongoDB connected')
+      } catch (error) {
+        console.warn(`MongoDB unavailable, using memory storage: ${error.message}`)
+      }
+    }
+    console.log(`API running at http://localhost:${port}`)
+  })
+}
