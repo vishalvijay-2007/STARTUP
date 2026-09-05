@@ -102,7 +102,8 @@
 }
 
 .course-form button:hover,
-.refresh-btn:hover {
+.refresh-btn:hover,
+.course-actions button:hover {
   transform: translateY(-1px);
 }
 
@@ -155,6 +156,37 @@
 .course-item p {
   margin: 0;
   color: #475569;
+}
+
+.course-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.course-actions button,
+.cancel-btn {
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 8px 12px;
+}
+
+.edit-btn {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.delete-btn {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.cancel-btn {
+  background: #e2e8f0;
+  color: #334155;
 }
 
 @media (max-width: 820px) {

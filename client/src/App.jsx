@@ -12,6 +12,7 @@ const initialForm = {
 function App() {
   const [form, setForm] = useState(initialForm)
   const [courses, setCourses] = useState([])
+  const [editingCourseId, setEditingCourseId] = useState(null)
   const [status, setStatus] = useState('Loading courses...')
   const [loading, setLoading] = useState(false)
 
@@ -39,21 +40,41 @@ function App() {
     setForm((currentForm) => ({ ...currentForm, [name]: value }))
   }
 
+  const startEditing = (course) => {
+    setEditingCourseId(course._id)
+    setForm({
+      title: course.title,
+      category: course.category,
+      description: course.description,
+      hours: String(course.hours),
+    })
+    setStatus(`Editing ${course.title}`)
+  }
+
+  const cancelEditing = () => {
+    setEditingCourseId(null)
+    setForm(initialForm)
+    setStatus('Ready to add a course.')
+  }
+
   const handleSubmit = async (event) => {
     event.preventDefault()
     setLoading(true)
 
     try {
-      const response = await fetch(`${API_BASE_URL}/courses`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetch(
+        `${API_BASE_URL}/courses${editingCourseId ? `/${editingCourseId}` : ''}`,
+        {
+          method: editingCourseId ? 'PUT' : 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            ...form,
+            hours: Number(form.hours),
+          }),
         },
-        body: JSON.stringify({
-          ...form,
-          hours: Number(form.hours),
-        }),
-      })
+      )
 
       const result = await response.json()
 
@@ -62,8 +83,33 @@ function App() {
       }
 
       setForm(initialForm)
-      setStatus(`Course created: ${result.title}`)
-      fetchCourses()
+      setEditingCourseId(null)
+      setStatus(`Course ${editingCourseId ? 'updated' : 'created'}: ${result.title}`)
+      await fetchCourses()
+    } catch (error) {
+      setStatus(error.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDelete = async (course) => {
+    if (!window.confirm(`Delete ${course.title}?`)) return
+
+    setLoading(true)
+    try {
+      const response = await fetch(`${API_BASE_URL}/courses/${course._id}`, {
+        method: 'DELETE',
+      })
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Course could not be deleted.')
+      }
+
+      if (editingCourseId === course._id) cancelEditing()
+      setStatus(`Course deleted: ${course.title}`)
+      await fetchCourses()
     } catch (error) {
       setStatus(error.message)
     } finally {
@@ -83,7 +129,7 @@ function App() {
 
       <main className="content-grid">
         <section className="panel form-panel">
-          <h2>Add a new course</h2>
+          <h2>{editingCourseId ? 'Edit course' : 'Add a new course'}</h2>
           <form onSubmit={handleSubmit} className="course-form">
             <label>
               Course title
@@ -134,8 +180,13 @@ function App() {
             </label>
 
             <button type="submit" disabled={loading}>
-              {loading ? 'Saving...' : 'Save Course'}
+              {loading ? 'Saving...' : editingCourseId ? 'Update Course' : 'Save Course'}
             </button>
+            {editingCourseId && (
+              <button type="button" className="cancel-btn" onClick={cancelEditing} disabled={loading}>
+                Cancel editing
+              </button>
+            )}
           </form>
         </section>
 
@@ -154,9 +205,17 @@ function App() {
               <li key={course._id} className="course-item">
                 <div>
                   <h3>{course.title}</h3>
-                  <p className="meta">{course.category} • {course.hours} hours</p>
+                  <p className="meta">{course.category} | {course.hours} hours</p>
                 </div>
                 <p>{course.description}</p>
+                <div className="course-actions">
+                  <button type="button" className="edit-btn" onClick={() => startEditing(course)} disabled={loading}>
+                    Edit
+                  </button>
+                  <button type="button" className="delete-btn" onClick={() => handleDelete(course)} disabled={loading}>
+                    Delete
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
