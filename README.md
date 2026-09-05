@@ -53,6 +53,17 @@ Course create and update requests use `multipart/form-data` and accept an option
 
 4. Open the React app in the browser and use the course form to create records.
 
+## Run with Docker
+
+Build and start the full application in one container:
+
+```bash
+docker build -t startup-management-platform .
+docker run --rm -p 5000:5000 -v startup-uploads:/app/server/uploads startup-management-platform
+```
+
+Open http://localhost:5000. The container serves the React frontend and Express API from the same origin. Set `MONGODB_URI`, `JWT_SECRET`, and `GOOGLE_CLIENT_ID` with `-e` or an environment file when deploying.
+
 ## Deployment and Submission Links
 
 - Deployed frontend: https://vishalvijay-2007.github.io/STARTUP/

@@ -19,6 +19,7 @@ const jwtSecret = process.env.JWT_SECRET || 'local-development-jwt-secret'
 const googleClientId = process.env.GOOGLE_CLIENT_ID || ''
 const googleClient = new OAuth2Client(googleClientId)
 const uploadDirectory = join(process.cwd(), 'server', 'uploads')
+const clientBuildDirectory = join(process.cwd(), 'client', 'dist')
 
 if (!existsSync(uploadDirectory)) mkdirSync(uploadDirectory, { recursive: true })
 
@@ -617,6 +618,13 @@ app.post('/api/auth/google', async (request, response) => {
     response.status(401).json({ message: 'Google authentication failed.' })
   }
 })
+
+if (existsSync(clientBuildDirectory)) {
+  app.use(express.static(clientBuildDirectory))
+  app.get(/^(?!\/api(?:\/|$)|\/uploads(?:\/|$)).*/, (_request, response) => {
+    response.sendFile(join(clientBuildDirectory, 'index.html'))
+  })
+}
 
 export {
   app,
