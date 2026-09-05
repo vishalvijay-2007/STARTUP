@@ -53,6 +53,15 @@ Course create and update requests use `multipart/form-data` and accept an option
 
 4. Open the React app in the browser and use the course form to create records.
 
+## Deployment and Submission Links
+
+- Deployed frontend: https://vishalvijay-2007.github.io/STARTUP/
+- GitHub repository: https://github.com/vishalvijay-2007/STARTUP
+- GitHub pull request: Add the pull request URL here after opening the PR from the feature branch.
+- Video explanation: Add the public video URL here after recording and uploading the explanation.
+
+The frontend is deployed automatically to GitHub Pages from the `main` branch after the frontend deployment workflow completes. The deployed UI needs a publicly hosted backend URL for authentication and course API actions; set `VITE_API_URL` in the deployment environment when that backend is available.
+
 ## Google Sign-In Setup
 
 1. Open Google Cloud Console and create or select a project.
