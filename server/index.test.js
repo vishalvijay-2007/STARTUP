@@ -1,6 +1,7 @@
 import {
   createPasswordHash,
   createUniqueUsername,
+  fallbackCourseSuggestion,
   normalizeUsername,
   serializeUser,
   verifyPassword,
@@ -52,5 +53,14 @@ describe('authentication and user helpers', () => {
     const uniqueUsername = await createUniqueUsername('asha@example.com')
 
     expect(uniqueUsername).toBe('asha')
+  })
+
+  test('creates a useful fallback course suggestion from partial input', () => {
+    expect(fallbackCourseSuggestion({ title: 'Pitching', category: '', description: '' })).toEqual({
+      title: 'Pitching',
+      category: 'Startup Operations',
+      description: 'Build practical pitching skills through focused lessons, examples, and an action plan for your startup team.',
+      hours: 6,
+    })
   })
 })

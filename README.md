@@ -9,6 +9,7 @@ This project helps startup incubators manage courses, mentors, and learning reso
 - Startup learning portfolio tracking
 - Dashboard overview
 - API-backed data storage support
+- AI-assisted course autocomplete with optional OpenAI integration
 
 ## Tech Stack
 - React
@@ -37,6 +38,8 @@ the deleted course from every user's enrollment list.
 If a MongoDB connection string is set in an environment variable, the app stores records in MongoDB. Otherwise it falls back to in-memory storage so the project can still run locally without a database.
 
 Course create and update requests use `multipart/form-data` and accept an optional `file` field. Files up to 10MB are stored locally in `server/uploads` and are returned as `fileUrl` and `fileName` fields.
+
+The course form includes an AI suggestion action backed by `POST /api/ai/course-suggestions`. Set `OPENAI_API_KEY` (and optionally `OPENAI_API_URL` or `OPENAI_MODEL`) to use an OpenAI-compatible LLM. Without a key, the endpoint uses a local fallback so the feature remains available during development.
 
 ## Run Locally
 
