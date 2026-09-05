@@ -22,7 +22,9 @@ The backend exposes the following API endpoints:
 - GET /api/health
 - GET /api/courses
 - POST /api/courses
+- PUT /api/courses/:id
 - POST /api/users
+- PUT /api/users/:id
 
 If a MongoDB connection string is set in an environment variable, the app stores records in MongoDB. Otherwise it falls back to in-memory storage so the project can still run locally without a database.
 
@@ -56,6 +58,21 @@ POST http://localhost:5000/api/users
    "name": "Vishal Vijay",
    "email": "vishal@example.com",
    "role": "student"
+}
+
+PUT http://localhost:5000/api/courses/local-COURSE_ID
+{
+   "title": "AI for Startup Founders",
+   "category": "Technology",
+   "description": "Updated training content for startup teams.",
+   "hours": 10
+}
+
+PUT http://localhost:5000/api/users/local-USER_ID
+{
+   "name": "Vishal Vijay",
+   "email": "vishal@example.com",
+   "role": "admin"
 }
 
 ## Project Completed
