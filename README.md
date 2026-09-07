@@ -58,7 +58,7 @@ Important variables are documented in [.env.example](.env.example):
 For the browser, create `client/.env` when needed:
 
 ```env
-VITE_API_URL=https://startup-api-3shs.onrender.com
+VITE_API_URL=https://startup-api-3shs.onrender.com/api
 VITE_GOOGLE_CLIENT_ID=1065389571330-2sjilk3sul2152t7abu84ekbekst1gc7.apps.googleusercontent.com
 ```
 
