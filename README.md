@@ -58,7 +58,7 @@ Important variables are documented in [.env.example](.env.example):
 For the browser, create `client/.env` when needed:
 
 ```env
-VITE_API_URL=http://localhost:5000/api
+VITE_API_URL=https://startup-api-3shs.onrender.com
 VITE_GOOGLE_CLIENT_ID=1065389571330-2sjilk3sul2152t7abu84ekbekst1gc7.apps.googleusercontent.com
 ```
 
@@ -78,7 +78,7 @@ cd client
 npm run dev
 ```
 
-Open `http://localhost:5173`. Check `http://localhost:5000/api/health` to verify the API. Run the automated checks with:
+Open `http://localhost:5173`. Check `https://startup-api-3shs.onrender.com//health` to verify the API. Run the automated checks with:
 
 ```bash
 npm test

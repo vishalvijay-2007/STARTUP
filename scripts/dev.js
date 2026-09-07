@@ -14,7 +14,7 @@ const run = (args, label) => {
 
 console.log('Starting Startup Management Platform...')
 console.log('Frontend: http://localhost:5173')
-console.log('Backend:  http://localhost:5000')
+console.log('Backend:  https://startup-api-3shs.onrender.com/')
 
 run(['run', 'server'], 'server')
 run(['--prefix', 'client', 'run', 'dev'], 'client')
