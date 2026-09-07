@@ -1,0 +1,15 @@
+meta {
+  name: Enroll User
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/users/{{userId}}/courses/{{courseId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}

@@ -1,0 +1,23 @@
+{
+  "name": "startup-management-platform",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "server": "node server/index.js",
+    "dev": "node scripts/dev.js",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand",
+    "client": "npm --prefix client run dev"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
+    "express": "^5.1.0",
+    "google-auth-library": "^11.0.2",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.0.2",
+    "mongoose": "^9.9.4"
+  },
+  "devDependencies": {
+    "jest": "^30.0.0"
+  }
+}

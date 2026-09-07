@@ -1,0 +1,23 @@
+meta {
+  name: Update Course
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/api/courses/{{courseId}}
+  body: multipartForm
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:multipart-form {
+  title: AI for Startup Founders
+  category: Technology
+  description: Updated training content for startup teams.
+  hours: 10
+  file: @./course-material.txt
+}
