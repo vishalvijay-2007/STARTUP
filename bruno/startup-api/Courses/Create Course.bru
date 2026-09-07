@@ -1,0 +1,27 @@
+meta {
+  name: Create Course
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/courses
+  body: multipartForm
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:multipart-form {
+  title: AI for Founders
+  category: Technology
+  description: Learn how to build AI products for startup teams.
+  hours: 8
+  file: @./course-material.txt
+}
+
+script:post-response {
+  bru.setEnvVar("courseId", res.body._id)
+}

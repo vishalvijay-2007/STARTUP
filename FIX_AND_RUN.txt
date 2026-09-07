@@ -1,0 +1,48 @@
+STARTUP - FIXED DEPLOYMENT VERSION
+
+What was fixed:
+1. GitHub Pages deployment workflow now runs for:
+   - main
+   - feature/final-project-submission
+2. Production API URL remains:
+   https://startup-api-3shs.onrender.com/api
+3. Frontend now trims a trailing slash from VITE_API_URL.
+4. Frontend gives a clear API error instead of showing the misleading
+   JSON error when a server returns HTML/404.
+
+IMPORTANT:
+Do not run the commands from C:\Users\visha\Downloads\STARTUP\client.
+The actual project is:
+C:\Users\visha\Downloads\STARTUP\StartUp_Fixed\StartUp
+
+After replacing/updating the project, run from the StartUp folder:
+
+npm install
+npm install --prefix client
+npm run build --prefix client
+
+For local testing, use two terminals:
+Terminal 1:
+npm run server
+
+Terminal 2:
+npm run client
+
+Then open:
+http://localhost:5173
+
+Backend test:
+Invoke-WebRequest http://localhost:5000/api/health -UseBasicParsing
+
+Expected:
+StatusCode 200
+Content {"ok":true,"database":"memory"}
+
+For GitHub Pages:
+Commit and push the .github/workflows/deploy-frontend.yml change to
+feature/final-project-submission. The Pages workflow will build using the
+Render API URL automatically.
+
+If the GitHub repository's Pages deployment source is configured to a
+different workflow/branch, open GitHub -> Settings -> Pages and make sure
+the deployment method is GitHub Actions.
