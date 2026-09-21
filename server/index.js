@@ -1,8 +1,14 @@
 import 'dotenv/config'
+
 import { existsSync, mkdirSync } from 'node:fs'
 import { basename, extname, join } from 'node:path'
 import { promisify } from 'node:util'
-import { randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto'
+import {
+  randomBytes,
+  scrypt as scryptCallback,
+  timingSafeEqual,
+} from 'node:crypto'
+
 import cors from 'cors'
 import express from 'express'
 import { OAuth2Client } from 'google-auth-library'
@@ -11,139 +17,378 @@ import mongoose from 'mongoose'
 import multer from 'multer'
 
 const app = express()
-const port = process.env.PORT || 5000
+
+// Render provides PORT automatically.
+// 5000 is only the local fallback.
+const port = Number(process.env.PORT) || 5000
+
 const courses = []
 const users = []
+
 const scrypt = promisify(scryptCallback)
+
 const isProduction = process.env.NODE_ENV === 'production'
+
 if (isProduction && !process.env.JWT_SECRET) {
   throw new Error('JWT_SECRET must be configured in production.')
 }
-const jwtSecret = process.env.JWT_SECRET || 'local-development-jwt-secret'
+
+const jwtSecret =
+  process.env.JWT_SECRET || 'local-development-jwt-secret'
+
 const googleClientId = process.env.GOOGLE_CLIENT_ID || ''
 const googleClient = new OAuth2Client(googleClientId)
-const uploadDirectory = join(process.cwd(), 'server', 'uploads')
-const clientBuildDirectory = join(process.cwd(), 'client', 'dist')
 
-if (!existsSync(uploadDirectory)) mkdirSync(uploadDirectory, { recursive: true })
+const uploadDirectory = join(
+  process.cwd(),
+  'server',
+  'uploads',
+)
+
+const clientBuildDirectory = join(
+  process.cwd(),
+  'client',
+  'dist',
+)
+
+if (!existsSync(uploadDirectory)) {
+  mkdirSync(uploadDirectory, { recursive: true })
+}
 
 const upload = multer({
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: {
+    fileSize: 10 * 1024 * 1024,
+  },
+
   storage: multer.diskStorage({
     destination: uploadDirectory,
+
     filename: (_request, file, callback) => {
-      const safeName = basename(file.originalname, extname(file.originalname)).replace(/[^a-z0-9-_]/gi, '-').slice(0, 60)
-      callback(null, `${Date.now()}-${safeName || 'course-file'}${extname(file.originalname).toLowerCase()}`)
+      const safeName = basename(
+        file.originalname,
+        extname(file.originalname),
+      )
+        .replace(/[^a-z0-9-_]/gi, '-')
+        .slice(0, 60)
+
+      callback(
+        null,
+        `${Date.now()}-${safeName || 'course-file'}${extname(
+          file.originalname,
+        ).toLowerCase()}`,
+      )
     },
   }),
 })
 
-app.use(cors())
+// -----------------------------------------------------
+// Middleware
+// -----------------------------------------------------
+
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+  }),
+)
+
 app.use(express.json())
-app.use('/uploads', express.static(uploadDirectory))
+
+app.use(
+  '/uploads',
+  express.static(uploadDirectory),
+)
+
+// -----------------------------------------------------
+// MongoDB Schemas
+// -----------------------------------------------------
 
 const courseSchema = new mongoose.Schema(
   {
-    title: { type: String, required: true, trim: true },
-    category: { type: String, required: true, trim: true },
-    description: { type: String, required: true, trim: true },
-    hours: { type: Number, required: true, min: 1 },
-    fileName: { type: String, trim: true },
-    fileUrl: { type: String, trim: true },
-    students: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    category: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    description: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    hours: {
+      type: Number,
+      required: true,
+      min: 1,
+    },
+
+    fileName: {
+      type: String,
+      trim: true,
+    },
+
+    fileUrl: {
+      type: String,
+      trim: true,
+    },
+
+    students: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
   },
-  { timestamps: true },
+
+  {
+    timestamps: true,
+  },
 )
 
 const Course = mongoose.model('Course', courseSchema)
 
 const userSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true, trim: true },
-    username: { type: String, required: true, unique: true, lowercase: true, trim: true },
-    passwordHash: { type: String, required: true, select: false },
-    googleId: { type: String, unique: true, sparse: true, select: false },
-    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-    role: { type: String, enum: ['student', 'admin'], default: 'student' },
-    enrolledCourses: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Course' }],
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    username: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+    },
+
+    passwordHash: {
+      type: String,
+      required: true,
+      select: false,
+    },
+
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      select: false,
+    },
+
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+    },
+
+    role: {
+      type: String,
+      enum: ['student', 'admin'],
+      default: 'student',
+    },
+
+    enrolledCourses: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Course',
+      },
+    ],
   },
-  { timestamps: true },
+
+  {
+    timestamps: true,
+  },
 )
 
 const User = mongoose.model('User', userSchema)
 
-const isDatabaseConnected = () => mongoose.connection.readyState === 1
+// -----------------------------------------------------
+// Helpers
+// -----------------------------------------------------
 
-const isValidResourceId = (id) => !isDatabaseConnected() || mongoose.isValidObjectId(id)
+const isDatabaseConnected = () =>
+  mongoose.connection.readyState === 1
+
+const isValidResourceId = (id) =>
+  !isDatabaseConnected() || mongoose.isValidObjectId(id)
 
 const normalizeUsername = (username) =>
-  typeof username === 'string' ? username.trim().toLowerCase() : ''
+  typeof username === 'string'
+    ? username.trim().toLowerCase()
+    : ''
 
-const fallbackCourseSuggestion = ({ title = '', category = '', description = '' }) => {
+const fallbackCourseSuggestion = ({
+  title = '',
+  category = '',
+  description = '',
+}) => {
   const normalizedTitle = title.trim()
   const normalizedCategory = category.trim()
-  const topic = normalizedTitle || normalizedCategory || 'startup growth'
+
+  const topic =
+    normalizedTitle ||
+    normalizedCategory ||
+    'startup growth'
 
   return {
-    title: normalizedTitle || `Practical ${topic} for Founders`,
-    category: normalizedCategory || 'Startup Operations',
+    title:
+      normalizedTitle ||
+      `Practical ${topic} for Founders`,
+
+    category:
+      normalizedCategory ||
+      'Startup Operations',
+
     description:
       description.trim() ||
       `Build practical ${topic.toLowerCase()} skills through focused lessons, examples, and an action plan for your startup team.`,
+
     hours: 6,
   }
 }
 
+// -----------------------------------------------------
+// AI Course Suggestion
+// -----------------------------------------------------
+
 const generateCourseSuggestion = async (input) => {
   const apiKey = process.env.OPENAI_API_KEY
-  if (!apiKey) return fallbackCourseSuggestion(input)
 
-  const response = await fetch(process.env.OPENAI_API_URL || 'https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-      temperature: 0.4,
-      response_format: { type: 'json_object' },
-      messages: [
-        {
-          role: 'system',
-          content: 'Create a concise startup course suggestion. Return only JSON with title, category, description, and integer hours from 1 to 40.',
+  if (!apiKey) {
+    return fallbackCourseSuggestion(input)
+  }
+
+  const response = await fetch(
+    process.env.OPENAI_API_URL ||
+      'https://api.openai.com/v1/chat/completions',
+    {
+      method: 'POST',
+
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+
+      body: JSON.stringify({
+        model:
+          process.env.OPENAI_MODEL ||
+          'gpt-4o-mini',
+
+        temperature: 0.4,
+
+        response_format: {
+          type: 'json_object',
         },
-        { role: 'user', content: JSON.stringify(input) },
-      ],
-    }),
-  })
 
-  if (!response.ok) throw new Error('AI suggestion service is unavailable.')
+        messages: [
+          {
+            role: 'system',
+
+            content:
+              'Create a concise startup course suggestion. Return only JSON with title, category, description, and integer hours from 1 to 40.',
+          },
+
+          {
+            role: 'user',
+            content: JSON.stringify(input),
+          },
+        ],
+      }),
+    },
+  )
+
+  if (!response.ok) {
+    throw new Error(
+      'AI suggestion service is unavailable.',
+    )
+  }
+
   const result = await response.json()
-  const suggestion = JSON.parse(result.choices?.[0]?.message?.content || '{}')
+
+  const suggestion = JSON.parse(
+    result.choices?.[0]?.message?.content || '{}',
+  )
 
   return {
     title: String(suggestion.title || '').trim(),
-    category: String(suggestion.category || '').trim(),
-    description: String(suggestion.description || '').trim(),
-    hours: Math.min(40, Math.max(1, Number.parseInt(suggestion.hours, 10) || 6)),
+
+    category: String(
+      suggestion.category || '',
+    ).trim(),
+
+    description: String(
+      suggestion.description || '',
+    ).trim(),
+
+    hours: Math.min(
+      40,
+      Math.max(
+        1,
+        Number.parseInt(suggestion.hours, 10) || 6,
+      ),
+    ),
   }
 }
 
+// -----------------------------------------------------
+// Password helpers
+// -----------------------------------------------------
+
 const createPasswordHash = async (password) => {
   const salt = randomBytes(16).toString('hex')
-  const derivedKey = await scrypt(password, salt, 64)
+
+  const derivedKey = await scrypt(
+    password,
+    salt,
+    64,
+  )
+
   return `${salt}:${derivedKey.toString('hex')}`
 }
 
-const verifyPassword = async (password, storedHash) => {
+const verifyPassword = async (
+  password,
+  storedHash,
+) => {
   const [salt, key] = storedHash.split(':')
-  if (!salt || !key) return false
 
-  const derivedKey = await scrypt(password, salt, 64)
-  const storedKey = Buffer.from(key, 'hex')
-  return storedKey.length === derivedKey.length && timingSafeEqual(storedKey, derivedKey)
+  if (!salt || !key) {
+    return false
+  }
+
+  const derivedKey = await scrypt(
+    password,
+    salt,
+    64,
+  )
+
+  const storedKey = Buffer.from(
+    key,
+    'hex',
+  )
+
+  return (
+    storedKey.length === derivedKey.length &&
+    timingSafeEqual(
+      storedKey,
+      derivedKey,
+    )
+  )
 }
+
+// -----------------------------------------------------
+// User helpers
+// -----------------------------------------------------
 
 const serializeUser = (user) => ({
   id: user._id,
@@ -153,547 +398,1398 @@ const serializeUser = (user) => ({
   role: user.role,
 })
 
-const createAuthToken = (userId) => jwt.sign({}, jwtSecret, { subject: String(userId), expiresIn: '1h' })
+const createAuthToken = (userId) =>
+  jwt.sign(
+    {},
+    jwtSecret,
+    {
+      subject: String(userId),
+      expiresIn: '1h',
+    },
+  )
 
-const createUniqueUsername = async (email, excludeId = null) => {
-  const baseUsername = normalizeUsername(email.split('@')[0]).replace(/[^a-z0-9_]/g, '').slice(0, 16) || 'googleuser'
+const createUniqueUsername = async (
+  email,
+  excludeId = null,
+) => {
+  const baseUsername =
+    normalizeUsername(
+      email.split('@')[0],
+    )
+      .replace(/[^a-z0-9_]/g, '')
+      .slice(0, 16) || 'googleuser'
+
   let username = baseUsername
   let suffix = 1
 
-  const usernameExists = async (candidate) => {
+  const usernameExists = async (
+    candidate,
+  ) => {
     if (isDatabaseConnected()) {
-      return Boolean(await User.findOne({ username: candidate, ...(excludeId ? { _id: { $ne: excludeId } } : {}) }).lean())
+      return Boolean(
+        await User.findOne({
+          username: candidate,
+
+          ...(excludeId
+            ? {
+                _id: {
+                  $ne: excludeId,
+                },
+              }
+            : {}),
+        }).lean(),
+      )
     }
-    return users.some((user) => user.username === candidate && user._id !== excludeId)
+
+    return users.some(
+      (user) =>
+        user.username === candidate &&
+        user._id !== excludeId,
+    )
   }
 
-  while (await usernameExists(username)) {
-    username = `${baseUsername}${suffix}`.slice(0, 20)
+  while (
+    await usernameExists(username)
+  ) {
+    username =
+      `${baseUsername}${suffix}`.slice(
+        0,
+        20,
+      )
+
     suffix += 1
   }
 
   return username
 }
 
-const requireAuth = async (request, response, next) => {
-  const authorization = request.headers.authorization || ''
-  const token = authorization.startsWith('Bearer ') ? authorization.slice(7) : ''
+// -----------------------------------------------------
+// Authentication middleware
+// -----------------------------------------------------
 
-  if (!token) return response.status(401).json({ message: 'Authentication required.' })
+const requireAuth = async (
+  request,
+  response,
+  next,
+) => {
+  const authorization =
+    request.headers.authorization || ''
+
+  const token = authorization.startsWith(
+    'Bearer ',
+  )
+    ? authorization.slice(7)
+    : ''
+
+  if (!token) {
+    return response.status(401).json({
+      message: 'Authentication required.',
+    })
+  }
 
   try {
-    const { sub: userId } = jwt.verify(token, jwtSecret)
+    const { sub: userId } = jwt.verify(
+      token,
+      jwtSecret,
+    )
+
     request.user = isDatabaseConnected()
       ? await User.findById(userId).lean()
-      : users.find((user) => user._id === userId)
+      : users.find(
+          (user) => user._id === userId,
+        )
 
-    if (!request.user) return response.status(401).json({ message: 'Session is invalid.' })
+    if (!request.user) {
+      return response.status(401).json({
+        message: 'Session is invalid.',
+      })
+    }
+
     next()
   } catch (error) {
-    if (error instanceof jwt.JsonWebTokenError || error instanceof jwt.TokenExpiredError) {
-      return response.status(401).json({ message: 'Session is invalid or expired.' })
+    if (
+      error instanceof jwt.JsonWebTokenError ||
+      error instanceof jwt.TokenExpiredError
+    ) {
+      return response.status(401).json({
+        message:
+          'Session is invalid or expired.',
+      })
     }
 
-    response.status(500).json({ message: error.message })
+    return response.status(500).json({
+      message: error.message,
+    })
   }
 }
 
-app.get('/api/health', (_request, response) => {
-  response.json({ ok: true, database: isDatabaseConnected() ? 'mongodb' : 'memory' })
-})
+// -----------------------------------------------------
+// Health
+// -----------------------------------------------------
 
-app.post('/api/auth/register', async (request, response) => {
-  const { name, username, email, password } = request.body
-  const userName = typeof name === 'string' ? name.trim() : ''
-  const userUsername = normalizeUsername(username)
-  const userEmail = typeof email === 'string' ? email.trim().toLowerCase() : ''
-
-  if (
-    !userName ||
-    !/^[a-z0-9_]{3,20}$/.test(userUsername) ||
-    !/^\S+@\S+\.\S+$/.test(userEmail) ||
-    typeof password !== 'string' ||
-    password.length < 8
-  ) {
-    return response.status(400).json({
-      message: 'Name, valid username, email, and a password of at least 8 characters are required.',
+app.get(
+  '/api/health',
+  (_request, response) => {
+    response.json({
+      ok: true,
+      database: isDatabaseConnected()
+        ? 'mongodb'
+        : 'memory',
     })
-  }
+  },
+)
 
-  try {
-    const existingUser = isDatabaseConnected()
-      ? await User.findOne({ $or: [{ username: userUsername }, { email: userEmail }] }).lean()
-      : users.find((item) => item.username === userUsername || item.email === userEmail)
+// -----------------------------------------------------
+// Register
+// -----------------------------------------------------
 
-    if (existingUser) return response.status(409).json({ message: 'Username or email is already in use.' })
+app.post(
+  '/api/auth/register',
+  async (request, response) => {
+    const {
+      name,
+      username,
+      email,
+      password,
+    } = request.body
 
-    const passwordHash = await createPasswordHash(password)
-    const user = isDatabaseConnected()
-      ? await User.create({
-          name: userName,
-          username: userUsername,
-          passwordHash,
-          email: userEmail,
-          role: 'student',
-        })
-      : {
-          _id: `local-${Date.now()}`,
-          name: userName,
-          username: userUsername,
-          passwordHash,
-          email: userEmail,
-          role: 'student',
-          enrolledCourses: [],
-        }
+    const userName =
+      typeof name === 'string'
+        ? name.trim()
+        : ''
 
-    if (!isDatabaseConnected()) users.unshift(user)
-    const token = createAuthToken(user._id)
-    response.status(201).json({ token, user: serializeUser(user) })
-  } catch (error) {
-    response.status(500).json({ message: error.message })
-  }
-})
+    const userUsername =
+      normalizeUsername(username)
 
-app.post('/api/auth/login', async (request, response) => {
-  const userUsername = normalizeUsername(request.body.username)
-  const password = typeof request.body.password === 'string' ? request.body.password : ''
+    const userEmail =
+      typeof email === 'string'
+        ? email.trim().toLowerCase()
+        : ''
 
-  if (!userUsername || !password) {
-    return response.status(400).json({ message: 'Username and password are required.' })
-  }
-
-  try {
-    const user = isDatabaseConnected()
-      ? await User.findOne({ username: userUsername }).select('+passwordHash').lean()
-      : users.find((item) => item.username === userUsername)
-
-    if (!user || !(await verifyPassword(password, user.passwordHash))) {
-      return response.status(401).json({ message: 'Invalid username or password.' })
+    if (
+      !userName ||
+      !/^[a-z0-9_]{3,20}$/.test(
+        userUsername,
+      ) ||
+      !/^\S+@\S+\.\S+$/.test(
+        userEmail,
+      ) ||
+      typeof password !== 'string' ||
+      password.length < 8
+    ) {
+      return response.status(400).json({
+        message:
+          'Name, valid username, email, and a password of at least 8 characters are required.',
+      })
     }
 
-    const token = createAuthToken(user._id)
-    response.json({ token, user: serializeUser(user) })
-  } catch (error) {
-    response.status(500).json({ message: error.message })
-  }
-})
-
-app.get('/api/auth/me', requireAuth, (request, response) => {
-  response.json({ user: serializeUser(request.user) })
-})
-
-app.get('/api/courses', requireAuth, async (_request, response) => {
-  try {
-    const result = isDatabaseConnected()
-      ? await Course.find().sort({ createdAt: -1 }).lean()
-      : courses
-    response.json(result)
-  } catch (error) {
-    response.status(500).json({ message: error.message })
-  }
-})
-
-app.post('/api/ai/course-suggestions', requireAuth, async (request, response) => {
-  const input = {
-    title: typeof request.body.title === 'string' ? request.body.title : '',
-    category: typeof request.body.category === 'string' ? request.body.category : '',
-    description: typeof request.body.description === 'string' ? request.body.description : '',
-  }
-
-  try {
-    response.json({ suggestion: await generateCourseSuggestion(input) })
-  } catch (error) {
-    response.status(502).json({ message: error.message })
-  }
-})
-
-app.get('/api/courses/:id', requireAuth, async (request, response) => {
-  try {
-    const course = isDatabaseConnected()
-      ? await Course.findById(request.params.id).lean()
-      : courses.find((item) => item._id === request.params.id)
-
-    if (!course) {
-      return response.status(404).json({ message: 'Course not found.' })
-    }
-
-    response.json(course)
-  } catch (error) {
-    response.status(500).json({ message: error.message })
-  }
-})
-
-app.post('/api/courses', requireAuth, upload.single('file'), async (request, response) => {
-  const { title, category, description, hours } = request.body
-  const courseTitle = typeof title === 'string' ? title.trim() : ''
-  const courseCategory = typeof category === 'string' ? category.trim() : ''
-  const courseDescription = typeof description === 'string' ? description.trim() : ''
-  const courseHours = Number(hours)
-
-  if (!courseTitle || !courseCategory || !courseDescription || !Number.isInteger(courseHours) || courseHours < 1) {
-    return response.status(400).json({
-      message: 'Title, category, description, and positive whole-number hours are required.',
-    })
-  }
-
-  try {
-    const course = isDatabaseConnected()
-      ? await Course.create({
-          title: courseTitle,
-          category: courseCategory,
-          description: courseDescription,
-          hours: courseHours,
-          ...(request.file ? { fileName: request.file.originalname, fileUrl: `/uploads/${request.file.filename}` } : {}),
-        })
-      : {
-          _id: `local-${Date.now()}`,
-          title: courseTitle,
-          category: courseCategory,
-          description: courseDescription,
-          hours: courseHours,
-          ...(request.file ? { fileName: request.file.originalname, fileUrl: `/uploads/${request.file.filename}` } : {}),
-          students: [],
-        }
-
-    if (!isDatabaseConnected()) courses.unshift(course)
-    response.status(201).json(course)
-  } catch (error) {
-    response.status(500).json({ message: error.message })
-  }
-})
-
-app.post('/api/users', requireAuth, async (request, response) => {
-  response.status(410).json({
-    message: 'Create users through POST /api/auth/register with a username and password.',
-  })
-})
-
-app.get('/api/users/:id/courses', requireAuth, async (request, response) => {
-  if (!isValidResourceId(request.params.id)) {
-    return response.status(404).json({ message: 'User not found.' })
-  }
-
-  try {
-    if (isDatabaseConnected()) {
-      const user = await User.findById(request.params.id).populate('enrolledCourses').lean()
-
-      if (!user) {
-        return response.status(404).json({ message: 'User not found.' })
-      }
-
-      return response.json(user.enrolledCourses)
-    }
-
-    const user = users.find((item) => item._id === request.params.id)
-    if (!user) {
-      return response.status(404).json({ message: 'User not found.' })
-    }
-
-    response.json(
-      user.enrolledCourses
-        .map((courseId) => courses.find((course) => course._id === courseId))
-        .filter(Boolean),
-    )
-  } catch (error) {
-    response.status(500).json({ message: error.message })
-  }
-})
-
-app.post('/api/users/:userId/courses/:courseId', requireAuth, async (request, response) => {
-  const { userId, courseId } = request.params
-
-  if (!isValidResourceId(userId) || !isValidResourceId(courseId)) {
-    return response.status(404).json({ message: 'User or course not found.' })
-  }
-
-  try {
-    if (isDatabaseConnected()) {
-      const [user, course] = await Promise.all([
-        User.findById(userId).lean(),
-        Course.findById(courseId).lean(),
-      ])
-
-      if (!user || !course) {
-        return response.status(404).json({ message: 'User or course not found.' })
-      }
-
-      await Promise.all([
-        User.updateOne({ _id: userId }, { $addToSet: { enrolledCourses: courseId } }),
-        Course.updateOne({ _id: courseId }, { $addToSet: { students: userId } }),
-      ])
-      return response.status(201).json({ message: 'User enrolled in course successfully.' })
-    }
-
-    const user = users.find((item) => item._id === userId)
-    const course = courses.find((item) => item._id === courseId)
-    if (!user || !course) {
-      return response.status(404).json({ message: 'User or course not found.' })
-    }
-
-    if (!user.enrolledCourses.includes(courseId)) user.enrolledCourses.push(courseId)
-    if (!course.students.includes(userId)) course.students.push(userId)
-    response.status(201).json({ message: 'User enrolled in course successfully.' })
-  } catch (error) {
-    response.status(500).json({ message: error.message })
-  }
-})
-
-app.delete('/api/users/:userId/courses/:courseId', requireAuth, async (request, response) => {
-  const { userId, courseId } = request.params
-
-  if (!isValidResourceId(userId) || !isValidResourceId(courseId)) {
-    return response.status(404).json({ message: 'User or course not found.' })
-  }
-
-  try {
-    if (isDatabaseConnected()) {
-      const [user, course] = await Promise.all([
-        User.findById(userId).lean(),
-        Course.findById(courseId).lean(),
-      ])
-
-      if (!user || !course) {
-        return response.status(404).json({ message: 'User or course not found.' })
-      }
-
-      await Promise.all([
-        User.updateOne({ _id: userId }, { $pull: { enrolledCourses: courseId } }),
-        Course.updateOne({ _id: courseId }, { $pull: { students: userId } }),
-      ])
-      return response.json({ message: 'User unenrolled from course successfully.' })
-    }
-
-    const user = users.find((item) => item._id === userId)
-    const course = courses.find((item) => item._id === courseId)
-    if (!user || !course) {
-      return response.status(404).json({ message: 'User or course not found.' })
-    }
-
-    user.enrolledCourses = user.enrolledCourses.filter((id) => id !== courseId)
-    course.students = course.students.filter((id) => id !== userId)
-    response.json({ message: 'User unenrolled from course successfully.' })
-  } catch (error) {
-    response.status(500).json({ message: error.message })
-  }
-})
-
-app.put('/api/courses/:id', requireAuth, upload.single('file'), async (request, response) => {
-  const { title, category, description, hours } = request.body
-  const courseTitle = typeof title === 'string' ? title.trim() : ''
-  const courseCategory = typeof category === 'string' ? category.trim() : ''
-  const courseDescription = typeof description === 'string' ? description.trim() : ''
-  const courseHours = Number(hours)
-
-  if (
-    !courseTitle ||
-    !courseCategory ||
-    !courseDescription ||
-    !Number.isInteger(courseHours) ||
-    courseHours < 1
-  ) {
-    return response.status(400).json({
-      message: 'Title, category, description, and positive whole-number hours are required.',
-    })
-  }
-
-  if (!isValidResourceId(request.params.id)) {
-    return response.status(404).json({ message: 'Course not found.' })
-  }
-
-  try {
-    if (isDatabaseConnected()) {
-      const course = await Course.findByIdAndUpdate(
-        request.params.id,
-        {
-          title: courseTitle,
-          category: courseCategory,
-          description: courseDescription,
-          hours: courseHours,
-          ...(request.file ? { fileName: request.file.originalname, fileUrl: `/uploads/${request.file.filename}` } : {}),
-        },
-        { new: true, runValidators: true },
-      ).lean()
-
-      if (!course) {
-        return response.status(404).json({ message: 'Course not found.' })
-      }
-
-      return response.json(course)
-    }
-
-    const courseIndex = courses.findIndex((item) => item._id === request.params.id)
-    if (courseIndex === -1) {
-      return response.status(404).json({ message: 'Course not found.' })
-    }
-
-    courses[courseIndex] = {
-      ...courses[courseIndex],
-      title: courseTitle,
-      category: courseCategory,
-      description: courseDescription,
-      hours: courseHours,
-      ...(request.file ? { fileName: request.file.originalname, fileUrl: `/uploads/${request.file.filename}` } : {}),
-    }
-
-    response.json(courses[courseIndex])
-  } catch (error) {
-    response.status(500).json({ message: error.message })
-  }
-})
-
-app.put('/api/users/:id', requireAuth, async (request, response) => {
-  const { name, email, role } = request.body
-  const userName = typeof name === 'string' ? name.trim() : ''
-  const userEmail = typeof email === 'string' ? email.trim().toLowerCase() : ''
-  const userRole = role || 'student'
-
-  if (!userName || !/^\S+@\S+\.\S+$/.test(userEmail) || !['student', 'admin'].includes(userRole)) {
-    return response.status(400).json({
-      message: 'Name, a valid email, and a supported role are required.',
-    })
-  }
-
-  if (!isValidResourceId(request.params.id)) {
-    return response.status(404).json({ message: 'User not found.' })
-  }
-
-  try {
-    if (isDatabaseConnected()) {
-      const existingUser = await User.findOne({
-        email: userEmail,
-        _id: { $ne: request.params.id },
-      }).lean()
+    try {
+      const existingUser =
+        isDatabaseConnected()
+          ? await User.findOne({
+              $or: [
+                {
+                  username:
+                    userUsername,
+                },
+                {
+                  email: userEmail,
+                },
+              ],
+            }).lean()
+          : users.find(
+              (item) =>
+                item.username ===
+                  userUsername ||
+                item.email === userEmail,
+            )
 
       if (existingUser) {
-        return response.status(409).json({ message: 'A user with this email already exists.' })
+        return response.status(409).json({
+          message:
+            'Username or email is already in use.',
+        })
       }
 
-      const user = await User.findByIdAndUpdate(
-        request.params.id,
-        { name: userName, email: userEmail, role: userRole },
-        { new: true, runValidators: true },
-      ).lean()
+      const passwordHash =
+        await createPasswordHash(
+          password,
+        )
 
-      if (!user) {
-        return response.status(404).json({ message: 'User not found.' })
+      const user =
+        isDatabaseConnected()
+          ? await User.create({
+              name: userName,
+              username: userUsername,
+              passwordHash,
+              email: userEmail,
+              role: 'student',
+            })
+          : {
+              _id: `local-${Date.now()}`,
+              name: userName,
+              username: userUsername,
+              passwordHash,
+              email: userEmail,
+              role: 'student',
+              enrolledCourses: [],
+            }
+
+      if (!isDatabaseConnected()) {
+        users.unshift(user)
       }
 
-      return response.json(user)
+      const token = createAuthToken(
+        user._id,
+      )
+
+      response.status(201).json({
+        token,
+        user: serializeUser(user),
+      })
+    } catch (error) {
+      response.status(500).json({
+        message: error.message,
+      })
+    }
+  },
+)
+
+// -----------------------------------------------------
+// Login
+// -----------------------------------------------------
+
+app.post(
+  '/api/auth/login',
+  async (request, response) => {
+    const userUsername =
+      normalizeUsername(
+        request.body.username,
+      )
+
+    const password =
+      typeof request.body.password ===
+      'string'
+        ? request.body.password
+        : ''
+
+    if (!userUsername || !password) {
+      return response.status(400).json({
+        message:
+          'Username and password are required.',
+      })
     }
 
-    const userIndex = users.findIndex((item) => item._id === request.params.id)
-    if (userIndex === -1) {
-      return response.status(404).json({ message: 'User not found.' })
+    try {
+      const user =
+        isDatabaseConnected()
+          ? await User.findOne({
+              username: userUsername,
+            })
+              .select('+passwordHash')
+              .lean()
+          : users.find(
+              (item) =>
+                item.username ===
+                userUsername,
+            )
+
+      if (
+        !user ||
+        !(await verifyPassword(
+          password,
+          user.passwordHash,
+        ))
+      ) {
+        return response.status(401).json({
+          message:
+            'Invalid username or password.',
+        })
+      }
+
+      const token = createAuthToken(
+        user._id,
+      )
+
+      response.json({
+        token,
+        user: serializeUser(user),
+      })
+    } catch (error) {
+      response.status(500).json({
+        message: error.message,
+      })
+    }
+  },
+)
+
+// -----------------------------------------------------
+// Current user
+// -----------------------------------------------------
+
+app.get(
+  '/api/auth/me',
+  requireAuth,
+  (request, response) => {
+    response.json({
+      user: serializeUser(
+        request.user,
+      ),
+    })
+  },
+)
+
+// -----------------------------------------------------
+// Get courses
+// -----------------------------------------------------
+
+app.get(
+  '/api/courses',
+  requireAuth,
+  async (_request, response) => {
+    try {
+      const result =
+        isDatabaseConnected()
+          ? await Course.find()
+              .sort({
+                createdAt: -1,
+              })
+              .lean()
+          : courses
+
+      response.json(result)
+    } catch (error) {
+      response.status(500).json({
+        message: error.message,
+      })
+    }
+  },
+)
+
+// -----------------------------------------------------
+// AI course suggestions
+// -----------------------------------------------------
+
+app.post(
+  '/api/ai/course-suggestions',
+  requireAuth,
+  async (request, response) => {
+    const input = {
+      title:
+        typeof request.body.title ===
+        'string'
+          ? request.body.title
+          : '',
+
+      category:
+        typeof request.body.category ===
+        'string'
+          ? request.body.category
+          : '',
+
+      description:
+        typeof request.body.description ===
+        'string'
+          ? request.body.description
+          : '',
     }
 
-    const duplicateUser = users.find(
-      (item) => item.email === userEmail && item._id !== request.params.id,
-    )
-    if (duplicateUser) {
-      return response.status(409).json({ message: 'A user with this email already exists.' })
+    try {
+      response.json({
+        suggestion:
+          await generateCourseSuggestion(
+            input,
+          ),
+      })
+    } catch (error) {
+      response.status(502).json({
+        message: error.message,
+      })
     }
+  },
+)
 
-    users[userIndex] = {
-      ...users[userIndex],
-      name: userName,
-      email: userEmail,
-      role: userRole,
-    }
+// -----------------------------------------------------
+// Get single course
+// -----------------------------------------------------
 
-    response.json(users[userIndex])
-  } catch (error) {
-    response.status(500).json({ message: error.message })
-  }
-})
-
-app.delete('/api/courses/:id', requireAuth, async (request, response) => {
-  if (!isValidResourceId(request.params.id)) {
-    return response.status(404).json({ message: 'Course not found.' })
-  }
-
-  try {
-    if (isDatabaseConnected()) {
-      const course = await Course.findByIdAndDelete(request.params.id).lean()
+app.get(
+  '/api/courses/:id',
+  requireAuth,
+  async (request, response) => {
+    try {
+      const course =
+        isDatabaseConnected()
+          ? await Course.findById(
+              request.params.id,
+            ).lean()
+          : courses.find(
+              (item) =>
+                item._id ===
+                request.params.id,
+            )
 
       if (!course) {
-        return response.status(404).json({ message: 'Course not found.' })
+        return response.status(404).json({
+          message: 'Course not found.',
+        })
       }
 
-      await User.updateMany({}, { $pull: { enrolledCourses: request.params.id } })
-      return response.json({ message: 'Course deleted successfully.' })
+      response.json(course)
+    } catch (error) {
+      response.status(500).json({
+        message: error.message,
+      })
+    }
+  },
+)
+
+// -----------------------------------------------------
+// Create course
+// -----------------------------------------------------
+
+app.post(
+  '/api/courses',
+  requireAuth,
+  upload.single('file'),
+  async (request, response) => {
+    const {
+      title,
+      category,
+      description,
+      hours,
+    } = request.body
+
+    const courseTitle =
+      typeof title === 'string'
+        ? title.trim()
+        : ''
+
+    const courseCategory =
+      typeof category === 'string'
+        ? category.trim()
+        : ''
+
+    const courseDescription =
+      typeof description === 'string'
+        ? description.trim()
+        : ''
+
+    const courseHours = Number(hours)
+
+    if (
+      !courseTitle ||
+      !courseCategory ||
+      !courseDescription ||
+      !Number.isInteger(
+        courseHours,
+      ) ||
+      courseHours < 1
+    ) {
+      return response.status(400).json({
+        message:
+          'Title, category, description, and positive whole-number hours are required.',
+      })
     }
 
-    const courseIndex = courses.findIndex((item) => item._id === request.params.id)
-    if (courseIndex === -1) {
-      return response.status(404).json({ message: 'Course not found.' })
-    }
+    try {
+      const fileData = request.file
+        ? {
+            fileName:
+              request.file.originalname,
 
-    courses.splice(courseIndex, 1)
-    users.forEach((user) => {
-      user.enrolledCourses = user.enrolledCourses.filter((id) => id !== request.params.id)
+            fileUrl: `/uploads/${request.file.filename}`,
+          }
+        : {}
+
+      const course =
+        isDatabaseConnected()
+          ? await Course.create({
+              title: courseTitle,
+              category: courseCategory,
+              description:
+                courseDescription,
+              hours: courseHours,
+              ...fileData,
+            })
+          : {
+              _id: `local-${Date.now()}`,
+              title: courseTitle,
+              category: courseCategory,
+              description:
+                courseDescription,
+              hours: courseHours,
+              ...fileData,
+              students: [],
+            }
+
+      if (!isDatabaseConnected()) {
+        courses.unshift(course)
+      }
+
+      response.status(201).json(course)
+    } catch (error) {
+      response.status(500).json({
+        message: error.message,
+      })
+    }
+  },
+)
+
+// -----------------------------------------------------
+// Create users - deprecated
+// -----------------------------------------------------
+
+app.post(
+  '/api/users',
+  requireAuth,
+  async (_request, response) => {
+    response.status(410).json({
+      message:
+        'Create users through POST /api/auth/register with a username and password.',
     })
-    response.json({ message: 'Course deleted successfully.' })
-  } catch (error) {
-    response.status(500).json({ message: error.message })
-  }
-})
+  },
+)
 
-app.post('/api/auth/google', async (request, response) => {
-  const credential = typeof request.body.credential === 'string' ? request.body.credential : ''
+// -----------------------------------------------------
+// User courses
+// -----------------------------------------------------
 
-  if (!googleClientId) {
-    return response.status(503).json({ message: 'Google authentication is not configured on the server.' })
-  }
-
-  if (!credential) {
-    return response.status(400).json({ message: 'Google credential is required.' })
-  }
-
-  try {
-    const ticket = await googleClient.verifyIdToken({ idToken: credential, audience: googleClientId })
-    const payload = ticket.getPayload()
-    const googleId = payload?.sub
-    const email = payload?.email?.trim().toLowerCase()
-    const name = payload?.name?.trim() || email?.split('@')[0]
-
-    if (!googleId || !email || payload.email_verified !== true) {
-      return response.status(401).json({ message: 'Google account could not be verified.' })
+app.get(
+  '/api/users/:id/courses',
+  requireAuth,
+  async (request, response) => {
+    if (
+      !isValidResourceId(
+        request.params.id,
+      )
+    ) {
+      return response.status(404).json({
+        message: 'User not found.',
+      })
     }
 
-    let user = isDatabaseConnected()
-      ? await User.findOne({ $or: [{ googleId }, { email }] }).select('+passwordHash +googleId')
-      : users.find((item) => item.googleId === googleId || item.email === email)
+    try {
+      if (isDatabaseConnected()) {
+        const user =
+          await User.findById(
+            request.params.id,
+          )
+            .populate('enrolledCourses')
+            .lean()
 
-    if (user) {
-      if (isDatabaseConnected() && !user.googleId) {
-        user.googleId = googleId
-        await user.save()
-      } else if (!isDatabaseConnected()) {
-        user.googleId = googleId
+        if (!user) {
+          return response
+            .status(404)
+            .json({
+              message:
+                'User not found.',
+            })
+        }
+
+        return response.json(
+          user.enrolledCourses,
+        )
       }
-    } else {
-      const username = await createUniqueUsername(email)
-      const passwordHash = await createPasswordHash(randomBytes(32).toString('hex'))
-      user = isDatabaseConnected()
-        ? await User.create({ name, username, email, googleId, passwordHash, role: 'student' })
-        : { _id: `local-${Date.now()}`, name, username, email, googleId, passwordHash, role: 'student', enrolledCourses: [] }
 
-      if (!isDatabaseConnected()) users.unshift(user)
+      const user = users.find(
+        (item) =>
+          item._id ===
+          request.params.id,
+      )
+
+      if (!user) {
+        return response.status(404).json({
+          message: 'User not found.',
+        })
+      }
+
+      response.json(
+        user.enrolledCourses
+          .map((courseId) =>
+            courses.find(
+              (course) =>
+                course._id ===
+                courseId,
+            ),
+          )
+          .filter(Boolean),
+      )
+    } catch (error) {
+      response.status(500).json({
+        message: error.message,
+      })
+    }
+  },
+)
+
+// -----------------------------------------------------
+// Enroll user
+// -----------------------------------------------------
+
+app.post(
+  '/api/users/:userId/courses/:courseId',
+  requireAuth,
+  async (request, response) => {
+    const {
+      userId,
+      courseId,
+    } = request.params
+
+    if (
+      !isValidResourceId(userId) ||
+      !isValidResourceId(courseId)
+    ) {
+      return response.status(404).json({
+        message:
+          'User or course not found.',
+      })
     }
 
-    const token = createAuthToken(user._id)
-    response.json({ token, user: serializeUser(user) })
-  } catch (error) {
-    response.status(401).json({ message: 'Google authentication failed.' })
-  }
-})
+    try {
+      if (isDatabaseConnected()) {
+        const [user, course] =
+          await Promise.all([
+            User.findById(
+              userId,
+            ).lean(),
+
+            Course.findById(
+              courseId,
+            ).lean(),
+          ])
+
+        if (!user || !course) {
+          return response
+            .status(404)
+            .json({
+              message:
+                'User or course not found.',
+            })
+        }
+
+        await Promise.all([
+          User.updateOne(
+            { _id: userId },
+            {
+              $addToSet: {
+                enrolledCourses:
+                  courseId,
+              },
+            },
+          ),
+
+          Course.updateOne(
+            { _id: courseId },
+            {
+              $addToSet: {
+                students: userId,
+              },
+            },
+          ),
+        ])
+
+        return response.status(201).json({
+          message:
+            'User enrolled in course successfully.',
+        })
+      }
+
+      const user = users.find(
+        (item) =>
+          item._id === userId,
+      )
+
+      const course = courses.find(
+        (item) =>
+          item._id === courseId,
+      )
+
+      if (!user || !course) {
+        return response.status(404).json({
+          message:
+            'User or course not found.',
+        })
+      }
+
+      if (
+        !user.enrolledCourses.includes(
+          courseId,
+        )
+      ) {
+        user.enrolledCourses.push(
+          courseId,
+        )
+      }
+
+      if (
+        !course.students.includes(
+          userId,
+        )
+      ) {
+        course.students.push(
+          userId,
+        )
+      }
+
+      response.status(201).json({
+        message:
+          'User enrolled in course successfully.',
+      })
+    } catch (error) {
+      response.status(500).json({
+        message: error.message,
+      })
+    }
+  },
+)
+
+// -----------------------------------------------------
+// Unenroll user
+// -----------------------------------------------------
+
+app.delete(
+  '/api/users/:userId/courses/:courseId',
+  requireAuth,
+  async (request, response) => {
+    const {
+      userId,
+      courseId,
+    } = request.params
+
+    if (
+      !isValidResourceId(userId) ||
+      !isValidResourceId(courseId)
+    ) {
+      return response.status(404).json({
+        message:
+          'User or course not found.',
+      })
+    }
+
+    try {
+      if (isDatabaseConnected()) {
+        const [user, course] =
+          await Promise.all([
+            User.findById(
+              userId,
+            ).lean(),
+
+            Course.findById(
+              courseId,
+            ).lean(),
+          ])
+
+        if (!user || !course) {
+          return response
+            .status(404)
+            .json({
+              message:
+                'User or course not found.',
+            })
+        }
+
+        await Promise.all([
+          User.updateOne(
+            { _id: userId },
+            {
+              $pull: {
+                enrolledCourses:
+                  courseId,
+              },
+            },
+          ),
+
+          Course.updateOne(
+            { _id: courseId },
+            {
+              $pull: {
+                students: userId,
+              },
+            },
+          ),
+        ])
+
+        return response.json({
+          message:
+            'User unenrolled from course successfully.',
+        })
+      }
+
+      const user = users.find(
+        (item) =>
+          item._id === userId,
+      )
+
+      const course = courses.find(
+        (item) =>
+          item._id === courseId,
+      )
+
+      if (!user || !course) {
+        return response.status(404).json({
+          message:
+            'User or course not found.',
+        })
+      }
+
+      user.enrolledCourses =
+        user.enrolledCourses.filter(
+          (id) => id !== courseId,
+        )
+
+      course.students =
+        course.students.filter(
+          (id) => id !== userId,
+        )
+
+      response.json({
+        message:
+          'User unenrolled from course successfully.',
+      })
+    } catch (error) {
+      response.status(500).json({
+        message: error.message,
+      })
+    }
+  },
+)
+
+// -----------------------------------------------------
+// Update course
+// -----------------------------------------------------
+
+app.put(
+  '/api/courses/:id',
+  requireAuth,
+  upload.single('file'),
+  async (request, response) => {
+    const {
+      title,
+      category,
+      description,
+      hours,
+    } = request.body
+
+    const courseTitle =
+      typeof title === 'string'
+        ? title.trim()
+        : ''
+
+    const courseCategory =
+      typeof category === 'string'
+        ? category.trim()
+        : ''
+
+    const courseDescription =
+      typeof description === 'string'
+        ? description.trim()
+        : ''
+
+    const courseHours = Number(hours)
+
+    if (
+      !courseTitle ||
+      !courseCategory ||
+      !courseDescription ||
+      !Number.isInteger(
+        courseHours,
+      ) ||
+      courseHours < 1
+    ) {
+      return response.status(400).json({
+        message:
+          'Title, category, description, and positive whole-number hours are required.',
+      })
+    }
+
+    if (
+      !isValidResourceId(
+        request.params.id,
+      )
+    ) {
+      return response.status(404).json({
+        message: 'Course not found.',
+      })
+    }
+
+    try {
+      const fileData = request.file
+        ? {
+            fileName:
+              request.file.originalname,
+
+            fileUrl: `/uploads/${request.file.filename}`,
+          }
+        : {}
+
+      if (isDatabaseConnected()) {
+        const course =
+          await Course.findByIdAndUpdate(
+            request.params.id,
+
+            {
+              title: courseTitle,
+              category: courseCategory,
+              description:
+                courseDescription,
+              hours: courseHours,
+              ...fileData,
+            },
+
+            {
+              new: true,
+              runValidators: true,
+            },
+          ).lean()
+
+        if (!course) {
+          return response.status(404).json({
+            message:
+              'Course not found.',
+          })
+        }
+
+        return response.json(course)
+      }
+
+      const courseIndex =
+        courses.findIndex(
+          (item) =>
+            item._id ===
+            request.params.id,
+        )
+
+      if (courseIndex === -1) {
+        return response.status(404).json({
+          message: 'Course not found.',
+        })
+      }
+
+      courses[courseIndex] = {
+        ...courses[courseIndex],
+
+        title: courseTitle,
+        category: courseCategory,
+        description:
+          courseDescription,
+        hours: courseHours,
+
+        ...fileData,
+      }
+
+      response.json(
+        courses[courseIndex],
+      )
+    } catch (error) {
+      response.status(500).json({
+        message: error.message,
+      })
+    }
+  },
+)
+
+// -----------------------------------------------------
+// Update user
+// -----------------------------------------------------
+
+app.put(
+  '/api/users/:id',
+  requireAuth,
+  async (request, response) => {
+    const {
+      name,
+      email,
+      role,
+    } = request.body
+
+    const userName =
+      typeof name === 'string'
+        ? name.trim()
+        : ''
+
+    const userEmail =
+      typeof email === 'string'
+        ? email.trim().toLowerCase()
+        : ''
+
+    const userRole =
+      role || 'student'
+
+    if (
+      !userName ||
+      !/^\S+@\S+\.\S+$/.test(
+        userEmail,
+      ) ||
+      !['student', 'admin'].includes(
+        userRole,
+      )
+    ) {
+      return response.status(400).json({
+        message:
+          'Name, a valid email, and a supported role are required.',
+      })
+    }
+
+    if (
+      !isValidResourceId(
+        request.params.id,
+      )
+    ) {
+      return response.status(404).json({
+        message: 'User not found.',
+      })
+    }
+
+    try {
+      if (isDatabaseConnected()) {
+        const existingUser =
+          await User.findOne({
+            email: userEmail,
+
+            _id: {
+              $ne: request.params.id,
+            },
+          }).lean()
+
+        if (existingUser) {
+          return response.status(409).json({
+            message:
+              'A user with this email already exists.',
+          })
+        }
+
+        const user =
+          await User.findByIdAndUpdate(
+            request.params.id,
+
+            {
+              name: userName,
+              email: userEmail,
+              role: userRole,
+            },
+
+            {
+              new: true,
+              runValidators: true,
+            },
+          ).lean()
+
+        if (!user) {
+          return response.status(404).json({
+            message: 'User not found.',
+          })
+        }
+
+        return response.json(user)
+      }
+
+      const userIndex =
+        users.findIndex(
+          (item) =>
+            item._id ===
+            request.params.id,
+        )
+
+      if (userIndex === -1) {
+        return response.status(404).json({
+          message: 'User not found.',
+        })
+      }
+
+      const duplicateUser =
+        users.find(
+          (item) =>
+            item.email ===
+              userEmail &&
+            item._id !==
+              request.params.id,
+        )
+
+      if (duplicateUser) {
+        return response.status(409).json({
+          message:
+            'A user with this email already exists.',
+        })
+      }
+
+      users[userIndex] = {
+        ...users[userIndex],
+
+        name: userName,
+        email: userEmail,
+        role: userRole,
+      }
+
+      response.json(
+        users[userIndex],
+      )
+    } catch (error) {
+      response.status(500).json({
+        message: error.message,
+      })
+    }
+  },
+)
+
+// -----------------------------------------------------
+// Delete course
+// -----------------------------------------------------
+
+app.delete(
+  '/api/courses/:id',
+  requireAuth,
+  async (request, response) => {
+    if (
+      !isValidResourceId(
+        request.params.id,
+      )
+    ) {
+      return response.status(404).json({
+        message: 'Course not found.',
+      })
+    }
+
+    try {
+      if (isDatabaseConnected()) {
+        const course =
+          await Course.findByIdAndDelete(
+            request.params.id,
+          ).lean()
+
+        if (!course) {
+          return response.status(404).json({
+            message:
+              'Course not found.',
+          })
+        }
+
+        await User.updateMany(
+          {},
+          {
+            $pull: {
+              enrolledCourses:
+                request.params.id,
+            },
+          },
+        )
+
+        return response.json({
+          message:
+            'Course deleted successfully.',
+        })
+      }
+
+      const courseIndex =
+        courses.findIndex(
+          (item) =>
+            item._id ===
+            request.params.id,
+        )
+
+      if (courseIndex === -1) {
+        return response.status(404).json({
+          message: 'Course not found.',
+        })
+      }
+
+      courses.splice(courseIndex, 1)
+
+      users.forEach((user) => {
+        user.enrolledCourses =
+          user.enrolledCourses.filter(
+            (id) =>
+              id !== request.params.id,
+          )
+      })
+
+      response.json({
+        message:
+          'Course deleted successfully.',
+      })
+    } catch (error) {
+      response.status(500).json({
+        message: error.message,
+      })
+    }
+  },
+)
+
+// -----------------------------------------------------
+// Google authentication
+// -----------------------------------------------------
+
+app.post(
+  '/api/auth/google',
+  async (request, response) => {
+    const credential =
+      typeof request.body.credential ===
+      'string'
+        ? request.body.credential
+        : ''
+
+    if (!googleClientId) {
+      return response.status(503).json({
+        message:
+          'Google authentication is not configured on the server.',
+      })
+    }
+
+    if (!credential) {
+      return response.status(400).json({
+        message:
+          'Google credential is required.',
+      })
+    }
+
+    try {
+      const ticket =
+        await googleClient.verifyIdToken({
+          idToken: credential,
+          audience: googleClientId,
+        })
+
+      const payload =
+        ticket.getPayload()
+
+      const googleId =
+        payload?.sub
+
+      const email =
+        payload?.email
+          ?.trim()
+          .toLowerCase()
+
+      const name =
+        payload?.name?.trim() ||
+        email?.split('@')[0]
+
+      if (
+        !googleId ||
+        !email ||
+        payload.email_verified !== true
+      ) {
+        return response.status(401).json({
+          message:
+            'Google account could not be verified.',
+        })
+      }
+
+      let user =
+        isDatabaseConnected()
+          ? await User.findOne({
+              $or: [
+                {
+                  googleId,
+                },
+                {
+                  email,
+                },
+              ],
+            }).select(
+              '+passwordHash +googleId',
+            )
+          : users.find(
+              (item) =>
+                item.googleId ===
+                  googleId ||
+                item.email === email,
+            )
+
+      if (user) {
+        if (
+          isDatabaseConnected() &&
+          !user.googleId
+        ) {
+          user.googleId = googleId
+          await user.save()
+        } else if (
+          !isDatabaseConnected()
+        ) {
+          user.googleId = googleId
+        }
+      } else {
+        const username =
+          await createUniqueUsername(
+            email,
+          )
+
+        const passwordHash =
+          await createPasswordHash(
+            randomBytes(32).toString(
+              'hex',
+            ),
+          )
+
+        user =
+          isDatabaseConnected()
+            ? await User.create({
+                name,
+                username,
+                email,
+                googleId,
+                passwordHash,
+                role: 'student',
+              })
+            : {
+                _id: `local-${Date.now()}`,
+                name,
+                username,
+                email,
+                googleId,
+                passwordHash,
+                role: 'student',
+                enrolledCourses: [],
+              }
+
+        if (!isDatabaseConnected()) {
+          users.unshift(user)
+        }
+      }
+
+      const token =
+        createAuthToken(user._id)
+
+      response.json({
+        token,
+        user: serializeUser(user),
+      })
+    } catch (error) {
+      response.status(401).json({
+        message:
+          'Google authentication failed.',
+      })
+    }
+  },
+)
+
+// -----------------------------------------------------
+// Serve frontend if built locally
+// -----------------------------------------------------
 
 if (existsSync(clientBuildDirectory)) {
-  app.use(express.static(clientBuildDirectory))
-  app.get(/^(?!\/api(?:\/|$)|\/uploads(?:\/|$)).*/, (_request, response) => {
-    response.sendFile(join(clientBuildDirectory, 'index.html'))
-  })
+  app.use(
+    express.static(
+      clientBuildDirectory,
+    ),
+  )
+
+  app.get(
+    /^(?!\/api(?:\/|$)|\/uploads(?:\/|$)).*/,
+    (_request, response) => {
+      response.sendFile(
+        join(
+          clientBuildDirectory,
+          'index.html',
+        ),
+      )
+    },
+  )
 }
+
+// -----------------------------------------------------
+// Exports
+// -----------------------------------------------------
 
 export {
   app,
@@ -708,16 +1804,38 @@ export {
   verifyPassword,
 }
 
+// -----------------------------------------------------
+// Start server
+// -----------------------------------------------------
+
 if (process.env.NODE_ENV !== 'test') {
-  app.listen(port, async () => {
-    if (process.env.MONGODB_URI) {
-      try {
-        await mongoose.connect(process.env.MONGODB_URI)
-        console.log('MongoDB connected')
-      } catch (error) {
-        console.warn(`MongoDB unavailable, using memory storage: ${error.message}`)
+  app.listen(
+    port,
+    '0.0.0.0',
+    async () => {
+      console.log(
+        `API running on 0.0.0.0:${port}`,
+      )
+
+      if (process.env.MONGODB_URI) {
+        try {
+          await mongoose.connect(
+            process.env.MONGODB_URI,
+          )
+
+          console.log(
+            'MongoDB connected',
+          )
+        } catch (error) {
+          console.warn(
+            `MongoDB unavailable, using memory storage: ${error.message}`,
+          )
+        }
+      } else {
+        console.log(
+          'MONGODB_URI not configured, using memory storage',
+        )
       }
-    }
-    console.log(`API running at http://localhost:${port}`)
-  })
+    },
+  )
 }
