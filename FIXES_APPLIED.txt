@@ -1,9 +1,0 @@
-FIXES INCLUDED
-- Windows npm child-process launch now uses shell mode on Windows to avoid spawn EINVAL.
-- Google administrator bootstrap is restricted to the exact server-side ADMIN_EMAIL and requires a verified Google ID token.
-- Admin dashboard can list accounts and grant/revoke Mentor access.
-- Admin role-management API endpoints require an authenticated Administrator token.
-- MongoDB connection completes before the API begins listening; REQUIRE_DATABASE=true prevents silent fallback to temporary memory storage.
-- Setup documentation covers MongoDB Atlas, Google OAuth origins, AI key configuration, and Windows run commands.
-- Existing AI local fallback remains available when OPENAI_API_KEY is not configured.
-- Real .env files, Git history, node_modules, and generated dist output are intentionally excluded from this ZIP for security and size.
