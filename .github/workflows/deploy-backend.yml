@@ -1,0 +1,68 @@
+name: Deploy backend
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - server/**
+      - shared/**
+      - package.json
+      - package-lock.json
+      - Dockerfile
+      - .github/workflows/deploy-backend.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+    steps:
+      - name: Check out backend source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Test backend
+        run: npm test
+      - name: Require Render deployment configuration
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::Run the production backend deployment from the main branch."
+            exit 1
+          fi
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "::error::Configure the RENDER_DEPLOY_HOOK_URL repository Actions secret."
+            exit 1
+          fi
+      - name: Trigger Render deployment
+        run: curl --fail --silent --show-error --request POST "$RENDER_DEPLOY_HOOK_URL"
+      - name: Verify the deployed API routes
+        run: |
+          for attempt in $(seq 1 60); do
+            health_status=$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 20 https://startup-api-3shs.onrender.com/api/health || true)
+            chat_status=$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 20 \
+              --request POST https://startup-api-3shs.onrender.com/api/ai/chat \
+              --header 'Content-Type: application/json' \
+              --data '{}') || true
+            photo_status=$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 20 \
+              --request POST https://startup-api-3shs.onrender.com/api/users/test-user/photo \
+              --header 'Content-Type: multipart/form-data') || true
+            if [ "$health_status" = "200" ] && [ "$chat_status" = "401" ] && [ "$photo_status" = "401" ]; then
+              echo "Render health is ready and the authenticated chat and profile photo routes are registered."
+              exit 0
+            fi
+            echo "Waiting for Render deployment (health=$health_status, chat=$chat_status, photo=$photo_status)."
+            sleep 15
+          done
+          echo "::error::Render did not report a healthy API with the authenticated chat and profile photo routes within 15 minutes."
+          exit 1

@@ -1,19 +1,9 @@
-npm installStartup Management Platform - Fixes Applied
-
-1. Fixed the main frontend issue: client/src/App.jsx now imports ./App.css.
-2. Rebuilt the frontend authentication styling so it no longer renders as unstyled/default HTML.
-3. Added responsive professional login/register layout and dashboard styling.
-4. Added missing dashboard button/status styles and mobile responsiveness.
-5. Added a root dev launcher: npm run dev starts both backend (5000) and frontend (5173).
-6. Added npm run client for starting only the React/Vite frontend.
-
-Run after extracting:
-  npm install
-  cd client && npm install
-  cd ..
-  npm run dev
-
-Open:
-  http://localhost:5173
-
-Note: node_modules and .git are intentionally excluded from this ZIP. This avoids platform-specific dependency problems and keeps the archive small. Your existing .env is preserved.
+FIXES INCLUDED
+- Windows npm child-process launch now uses shell mode on Windows to avoid spawn EINVAL.
+- Google administrator bootstrap is restricted to the exact server-side ADMIN_EMAIL and requires a verified Google ID token.
+- Admin dashboard can list accounts and grant/revoke Mentor access.
+- Admin role-management API endpoints require an authenticated Administrator token.
+- MongoDB connection completes before the API begins listening; REQUIRE_DATABASE=true prevents silent fallback to temporary memory storage.
+- Setup documentation covers MongoDB Atlas, Google OAuth origins, AI key configuration, and Windows run commands.
+- Existing AI local fallback remains available when OPENAI_API_KEY is not configured.
+- Real .env files, Git history, node_modules, and generated dist output are intentionally excluded from this ZIP for security and size.

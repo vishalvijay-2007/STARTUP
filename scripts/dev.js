@@ -4,7 +4,7 @@ const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm'
 const children = []
 
 const run = (args, label) => {
-  const child = spawn(npm, args, { stdio: 'inherit', shell: false })
+  const child = spawn(npm, args, { stdio: 'inherit', shell: process.platform === 'win32' })
   child.on('error', (error) => console.error(`[${label}] ${error.message}`))
   child.on('exit', (code) => {
     if (code && code !== 0) console.error(`[${label}] exited with code ${code}`)

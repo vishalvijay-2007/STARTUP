@@ -1,38 +1,70 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import IncubatorWorkspace from './components/IncubatorWorkspace.jsx'
+import AdminDashboard from './components/AdminDashboard.jsx'
+import { apiRequest } from './lib/api.js'
+import { getCurrentPath, navigateToPath, subscribeToPath } from './lib/browserRouter.js'
+import { workspacePageIds } from './lib/workspaceRoutes.js'
 import './App.css'
 
-const API_BASE_URL = (import.meta.env.VITE_API_URL?.trim() || (import.meta.env.PROD ? 'https://startup-api-3shs.onrender.com/api' : 'http://localhost:5000/api')).replace(/\/$/, '')
-const API_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, '')
+const initialForm = { name: '', username: '', email: '', password: '', confirmPassword: '' }
+const signInPath = '/signin'
+const dashboardPath = '/dashboard'
+const accountRoles = [
+  {
+    id: 'founder',
+    name: 'Founder',
+    description: 'Manage your startup and track your progress.',
+    icon: <path d="M4 19.5h16M6.5 16V9.5l5.5-4 5.5 4V16M9.5 16v-3.5h5V16" />,
+  },
+  {
+    id: 'mentor',
+    name: 'Mentor',
+    description: 'Support founders and manage mentoring sessions.',
+    icon: <path d="M12 12a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM5 20a7 7 0 0 1 14 0M18 8.5h4M20 6.5v4" />,
+  },
+  {
+    id: 'admin',
+    name: 'Administrator',
+    description: 'Manage users and approve Mentor access.',
+    icon: <path d="M12 3 4 6v5c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6l-8-3Zm-3 9 2 2 4-4" />,
+  },
+]
 
-const initialForm = {
-  title: '',
-  category: '',
-  description: '',
-  hours: '',
-  file: null,
+const authErrorMessage = (error) => {
+  if (error?.status >= 500) return 'We could not complete your request right now. Please try again shortly.'
+  if (!error?.status && error instanceof TypeError) return 'We could not reach the server. Check your connection and try again.'
+  return error?.message || 'We could not complete your request. Please try again.'
 }
 
-const initialAuthForm = {
-  name: '',
-  username: '',
-  email: '',
-  password: '',
-}
-
-function GoogleSignIn({ clientId, onCredential }) {
+function GoogleSignIn({ clientId, onCredential, onError }) {
   const buttonRef = useRef(null)
-  const callbackRef = useRef(onCredential)
+  const callbackRef = useRef({ onCredential, onError })
 
   useEffect(() => {
-    callbackRef.current = onCredential
-  }, [onCredential])
+    callbackRef.current = { onCredential, onError }
+  }, [onCredential, onError])
 
   useEffect(() => {
     if (!clientId) return undefined
 
+    const handleScriptError = () => {
+      callbackRef.current.onError('Google sign-in could not be loaded. Check your connection and try again.')
+    }
     const renderButton = () => {
       if (!window.google || !buttonRef.current) return
-      window.google.accounts.id.initialize({ client_id: clientId, callback: (response) => callbackRef.current(response) })
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: (response) => {
+          if (!response?.credential) {
+            callbackRef.current.onError('Google did not return a sign-in credential. Please try again.')
+            return
+          }
+          callbackRef.current.onCredential(response)
+        },
+        error_callback: () => {
+          callbackRef.current.onError('Google sign-in was closed or could not be opened. Please try again.')
+        },
+      })
       window.google.accounts.id.renderButton(buttonRef.current, {
         theme: 'outline',
         size: 'large',
@@ -41,20 +73,21 @@ function GoogleSignIn({ clientId, onCredential }) {
       })
     }
 
-    const existingScript = document.querySelector('script[src="https://accounts.google.com/gsi/client"]')
-    if (existingScript) {
-      renderButton()
-      return undefined
+    let script = document.querySelector('script[src="https://accounts.google.com/gsi/client"]')
+    if (!script) {
+      script = document.createElement('script')
+      script.src = 'https://accounts.google.com/gsi/client'
+      script.async = true
+      script.defer = true
+      document.head.appendChild(script)
     }
-
-    const script = document.createElement('script')
-    script.src = 'https://accounts.google.com/gsi/client'
-    script.async = true
-    script.defer = true
-    script.onload = renderButton
-    document.head.appendChild(script)
-
-    return () => script.remove()
+    script.addEventListener('load', renderButton)
+    script.addEventListener('error', handleScriptError)
+    if (window.google) renderButton()
+    return () => {
+      script.removeEventListener('load', renderButton)
+      script.removeEventListener('error', handleScriptError)
+    }
   }, [clientId])
 
   if (!clientId) return <p className="config-text">Google sign-in needs VITE_GOOGLE_CLIENT_ID.</p>
@@ -62,422 +95,315 @@ function GoogleSignIn({ clientId, onCredential }) {
 }
 
 function App() {
-  const [form, setForm] = useState(initialForm)
-  const [courses, setCourses] = useState([])
-  const [editingCourseId, setEditingCourseId] = useState(null)
-  const [status, setStatus] = useState('Loading courses...')
-  const [loading, setLoading] = useState(false)
   const [user, setUser] = useState(null)
   const [authMode, setAuthMode] = useState('login')
-  const [authForm, setAuthForm] = useState(initialAuthForm)
+  const [authForm, setAuthForm] = useState(initialForm)
   const [authStatus, setAuthStatus] = useState('')
-  const [aiLoading, setAiLoading] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [selectedRole, setSelectedRole] = useState('founder')
+  const [showPassword, setShowPassword] = useState(false)
+  const [checkingSession, setCheckingSession] = useState(() => Boolean(localStorage.getItem('authToken')))
+  const currentPath = useSyncExternalStore(subscribeToPath, getCurrentPath, () => '/')
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
-
-  const readApiResponse = async (response) => {
-    const contentType = response.headers.get('content-type') || ''
-    if (contentType.includes('application/json')) return response.json()
-    const text = await response.text()
-    throw new Error(`API returned ${response.status} instead of JSON. Check the API URL: ${API_BASE_URL}`)
-  }
-
-  const apiRequest = (url, options = {}) =>
-    fetch(url, {
-      ...options,
-      headers: {
-        ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
-        ...(localStorage.getItem('authToken')
-          ? { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
-          : {}),
-        ...options.headers,
-      },
-    })
-
-  const fetchCourses = async () => {
-    try {
-      const response = await apiRequest(`${API_BASE_URL}/courses`)
-      if (!response.ok) {
-        throw new Error('Unable to fetch courses')
-      }
-
-      const data = await readApiResponse(response)
-      setCourses(data)
-      setStatus(data.length ? 'Courses loaded successfully.' : 'No courses saved yet.')
-    } catch (error) {
-      setStatus(error.message)
-    }
-  }
 
   useEffect(() => {
     const token = localStorage.getItem('authToken')
-    if (!token) return
+    if (!token) return undefined
 
-    apiRequest(`${API_BASE_URL}/auth/me`)
-      .then(async (response) => {
-        if (!response.ok) throw new Error('Session expired.')
-        const result = await readApiResponse(response)
-        setUser(result.user)
-        await fetchCourses()
+    let active = true
+    apiRequest('/auth/me')
+      .then(({ user: currentUser }) => {
+        if (active) setUser(currentUser)
       })
-      .catch(() => localStorage.removeItem('authToken'))
+      .catch(() => {
+        if (!active) return
+        setAuthStatus(localStorage.getItem('authToken')
+          ? 'Your session could not be verified. Please sign in again.'
+          : 'Your session expired. Please sign in again.')
+      })
+      .finally(() => {
+        if (active) setCheckingSession(false)
+      })
+
+    return () => {
+      active = false
+    }
   }, [])
 
-  const handleChange = (event) => {
-    const { name, value, files } = event.target
-    setForm((currentForm) => ({ ...currentForm, [name]: name === 'file' ? files[0] || null : value }))
+  useEffect(() => {
+    if (!user?.profilePhoto?.startsWith('blob:')) return undefined
+    const photoUrl = user.profilePhoto
+    return () => URL.revokeObjectURL(photoUrl)
+  }, [user?.profilePhoto])
+
+  useEffect(() => {
+    const handleExpiredSession = () => {
+      setUser(null)
+      setAuthStatus('Your session expired. Please sign in again.')
+    }
+    window.addEventListener('auth-expired', handleExpiredSession)
+    return () => window.removeEventListener('auth-expired', handleExpiredSession)
+  }, [])
+
+  useEffect(() => {
+    if (checkingSession) return
+
+    if (!user) {
+      if (currentPath !== signInPath) navigateToPath(signInPath, { replace: true })
+      return
+    }
+
+    const page = currentPath.replace(/^\/+|\/+$/g, '')
+    const destination = page === 'admin' && user.role === 'admin'
+      ? '/admin'
+      : workspacePageIds.has(page) ? `/${page}` : dashboardPath
+    if (currentPath !== destination) navigateToPath(destination, { replace: true })
+  }, [checkingSession, currentPath, user])
+
+  const navigateToPage = (page) => {
+    if (!workspacePageIds.has(page)) return
+    navigateToPath(`/${page}`)
   }
 
-  const handleAuthChange = (event) => {
-    const { name, value } = event.target
-    setAuthForm((currentForm) => ({ ...currentForm, [name]: value }))
+  const establishSession = ({ token, user: authenticatedUser }) => {
+    localStorage.setItem('authToken', token)
+    setUser(authenticatedUser)
+    setAuthForm(initialForm)
+    setAuthStatus('')
+    navigateToPath(authenticatedUser?.role === 'admin' ? '/admin' : dashboardPath, { replace: true })
   }
 
   const handleAuthSubmit = async (event) => {
     event.preventDefault()
+    if (selectedRole === 'admin') {
+      setAuthStatus('Administrator access is available only to the Google account configured as ADMIN_EMAIL by the project owner. Use Continue with Google.')
+      return
+    }
+    if (loading) return
+    if (authMode === 'register' && authForm.password !== authForm.confirmPassword) {
+      setAuthStatus('Your passwords do not match.')
+      return
+    }
     setLoading(true)
     setAuthStatus('')
-
     try {
-      const response = await apiRequest(`${API_BASE_URL}/auth/${authMode}`, {
+      const requestBody = authMode === 'register'
+        ? {
+            name: authForm.name,
+            username: authForm.username,
+            email: authForm.email,
+            password: authForm.password,
+            role: selectedRole,
+          }
+        : { username: authForm.username, password: authForm.password, role: selectedRole }
+      const session = await apiRequest(`/auth/${authMode}`, {
         method: 'POST',
-        body: JSON.stringify(authForm),
+        body: JSON.stringify(requestBody),
       })
-      const result = await readApiResponse(response)
-      if (!response.ok) throw new Error(result.message || 'Authentication failed.')
-
-      localStorage.setItem('authToken', result.token)
-      setUser(result.user)
-      setAuthForm(initialAuthForm)
-      setAuthStatus('')
-      await fetchCourses()
+      if (session.user?.role !== selectedRole) {
+        const actualRole = accountRoles.find(({ id }) => id === session.user?.role)?.name
+        setAuthStatus(actualRole
+          ? `This account is registered as a ${actualRole}. Select ${actualRole} to sign in.`
+          : 'This account does not match the selected role. Choose the correct role and try again.')
+        return
+      }
+      establishSession(session)
     } catch (error) {
-      setAuthStatus(error.message)
+      setAuthStatus(authErrorMessage(error))
     } finally {
       setLoading(false)
     }
   }
 
-  const handleGoogleCredential = async (response) => {
+  const handleGoogleCredential = async ({ credential }) => {
+    if (loading) return
     setLoading(true)
     setAuthStatus('')
-
     try {
-      const result = await fetch(`${API_BASE_URL}/auth/google`, {
+      const googleAuthPath = authMode === 'register' ? '/auth/google/register' : '/auth/google'
+      const session = await apiRequest(googleAuthPath, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ credential: response.credential }),
-      }).then(async (apiResponse) => {
-        const data = await readApiResponse(apiResponse)
-        if (!apiResponse.ok) throw new Error(data.message || 'Google authentication failed.')
-        return data
+        body: JSON.stringify({ credential, role: selectedRole }),
       })
-
-      localStorage.setItem('authToken', result.token)
-      setUser(result.user)
-      await fetchCourses()
+      if (session.user?.role !== selectedRole) {
+        const actualRole = accountRoles.find(({ id }) => id === session.user?.role)?.name
+        setAuthStatus(actualRole
+          ? `This Google account is registered as a ${actualRole}. Select ${actualRole} to continue.`
+          : 'This account does not match the selected role. Choose the correct role and try again.')
+        return
+      }
+      establishSession(session)
     } catch (error) {
-      setAuthStatus(error.message)
+      setAuthStatus(authErrorMessage(error))
     } finally {
       setLoading(false)
     }
+  }
+
+  const selectRoleWithKeyboard = (event, index) => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+    event.preventDefault()
+    const nextIndex = event.key === 'Home'
+      ? 0
+      : event.key === 'End'
+        ? accountRoles.length - 1
+        : (index + (event.key === 'ArrowRight' ? 1 : accountRoles.length - 1)) % accountRoles.length
+    const nextRole = accountRoles[nextIndex]
+    setSelectedRole(nextRole.id)
+    event.currentTarget.parentElement?.querySelector(`[data-role="${nextRole.id}"]`)?.focus()
+    setAuthStatus('')
   }
 
   const logout = () => {
+    const token = localStorage.getItem('authToken')
     localStorage.removeItem('authToken')
     setUser(null)
-    setCourses([])
-    setStatus('')
-  }
+    setAuthStatus('')
+    navigateToPath(signInPath, { replace: true })
+    if (!token) return
 
-  const startEditing = (course) => {
-    setEditingCourseId(course._id)
-    setForm({
-      title: course.title,
-      category: course.category,
-      description: course.description,
-      hours: String(course.hours),
+    apiRequest('/auth/logout', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }).catch((error) => {
+      setAuthStatus(`You were signed out on this device, but the server could not invalidate the session: ${authErrorMessage(error)}`)
     })
-    setStatus(`Editing ${course.title}`)
   }
 
-  const cancelEditing = () => {
-    setEditingCourseId(null)
-    setForm(initialForm)
-    setStatus('Ready to add a course.')
+  if (checkingSession) {
+    return <main className="session-loading" aria-live="polite">Restoring your secure session…</main>
   }
 
-  const handleAiSuggest = async () => {
-    setAiLoading(true)
-    setStatus('Creating an AI course suggestion...')
-
-    try {
-      const response = await apiRequest(`${API_BASE_URL}/ai/course-suggestions`, {
-        method: 'POST',
-        body: JSON.stringify({
-          title: form.title,
-          category: form.category,
-          description: form.description,
-        }),
-      })
-      const result = await readApiResponse(response)
-      if (!response.ok) throw new Error(result.message || 'AI suggestion could not be created.')
-
-      setForm((currentForm) => ({ ...currentForm, ...result.suggestion }))
-      setStatus('AI suggestion added. Review it before saving.')
-    } catch (error) {
-      setStatus(error.message)
-    } finally {
-      setAiLoading(false)
+  if (user) {
+    const activePage = currentPath.replace(/^\/+|\/+$/g, '')
+    if (activePage === 'admin' && user.role === 'admin') {
+      return <AdminDashboard user={user} onBack={() => navigateToPath('/dashboard')} onLogout={logout} />
     }
-  }
-
-  const handleSubmit = async (event) => {
-    event.preventDefault()
-    setLoading(true)
-
-    try {
-      const courseData = new FormData()
-      courseData.append('title', form.title)
-      courseData.append('category', form.category)
-      courseData.append('description', form.description)
-      courseData.append('hours', String(Number(form.hours)))
-      if (form.file) courseData.append('file', form.file)
-
-      const response = await apiRequest(
-        `${API_BASE_URL}/courses${editingCourseId ? `/${editingCourseId}` : ''}`,
-        {
-          method: editingCourseId ? 'PUT' : 'POST',
-          body: courseData,
-        },
-      )
-
-      const result = await readApiResponse(response)
-
-      if (!response.ok) {
-        throw new Error(result.message || 'Course could not be saved.')
-      }
-
-      setForm(initialForm)
-      setEditingCourseId(null)
-      setStatus(`Course ${editingCourseId ? 'updated' : 'created'}: ${result.title}`)
-      await fetchCourses()
-    } catch (error) {
-      setStatus(error.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleDelete = async (course) => {
-    if (!window.confirm(`Delete ${course.title}?`)) return
-
-    setLoading(true)
-    try {
-      const response = await apiRequest(`${API_BASE_URL}/courses/${course._id}`, {
-        method: 'DELETE',
-      })
-      const result = await readApiResponse(response)
-
-      if (!response.ok) {
-        throw new Error(result.message || 'Course could not be deleted.')
-      }
-
-      if (editingCourseId === course._id) cancelEditing()
-      setStatus(`Course deleted: ${course.title}`)
-      await fetchCourses()
-    } catch (error) {
-      setStatus(error.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  if (!user) {
     return (
-      <main className="auth-shell">
-        <section className="auth-visual">
-          <div className="auth-visual-content">
-            <div className="brand-mark">
-              <span className="brand-icon">🚀</span>
-              STARTUP
-            </div>
-            <h2>Build, manage and grow your startup in one place.</h2>
-            <p>
-              Organize learning, mentors, resources and progress with a simple workspace built for ambitious founders.
-            </p>
-            <div className="feature-pills">
-              <span className="feature-pill">Mentor engagement</span>
-              <span className="feature-pill">Startup progress</span>
-              <span className="feature-pill">Resource management</span>
-            </div>
-          </div>
-        </section>
-
-        <section className="auth-card-wrap">
-          <div className="auth-panel">
-            <p className="eyebrow">Startup Management</p>
-            <h1>{authMode === 'login' ? 'Welcome back' : 'Create your account'}</h1>
-            <p className="auth-intro">Sign in to manage your startup learning courses.</p>
-            <form onSubmit={handleAuthSubmit} className="course-form">
-            {authMode === 'register' && (
-              <label>
-                Full name
-                <input name="name" value={authForm.name} onChange={handleAuthChange} required />
-              </label>
-            )}
-            <label>
-              Username
-              <input name="username" value={authForm.username} onChange={handleAuthChange} minLength="3" required />
-            </label>
-            {authMode === 'register' && (
-              <label>
-                Email
-                <input type="email" name="email" value={authForm.email} onChange={handleAuthChange} required />
-              </label>
-            )}
-            <label>
-              Password
-              <input type="password" name="password" value={authForm.password} onChange={handleAuthChange} minLength="8" required />
-            </label>
-            <button type="submit" disabled={loading}>{loading ? 'Please wait...' : authMode === 'login' ? 'Sign in' : 'Create account'}</button>
-            {authStatus && <p className="error-text">{authStatus}</p>}
-          </form>
-          <div className="auth-divider"><span>or</span></div>
-          <GoogleSignIn clientId={googleClientId} onCredential={handleGoogleCredential} />
-          <button type="button" className="link-btn" onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setAuthStatus('') }}>
-            {authMode === 'login' ? 'Need an account? Register' : 'Already registered? Sign in'}
-          </button>
-          </div>
-        </section>
-      </main>
+      <IncubatorWorkspace
+        user={user}
+        activePage={workspacePageIds.has(activePage) ? activePage : 'dashboard'}
+        onNavigate={navigateToPage}
+        onUserUpdated={(updatedUser) => setUser((currentUser) => ({ ...currentUser, ...updatedUser }))}
+        onLogout={logout}
+      />
     )
   }
 
   return (
-    <div className="app-shell">
-      <header className="topbar">
-        <div>
+    <main className="auth-shell">
+      <section className="auth-visual">
+        <div className="auth-visual-content">
+          <div className="brand-mark"><span className="brand-icon" aria-hidden="true">✦</span> STARTUP</div>
+          <h2>Build. Connect. Grow.</h2>
+          <p>One workspace for founders and mentors to turn ambitious ideas into meaningful progress.</p>
+          <div className="feature-pills">
+            <span className="feature-pill">Startup Growth</span>
+            <span className="feature-pill">Expert Mentorship</span>
+            <span className="feature-pill">Milestone Tracking</span>
+          </div>
+          <p className="auth-visual-footer">Empowering the next generation of startups.</p>
+        </div>
+      </section>
+      <section className="auth-card-wrap">
+        <div className="auth-panel">
           <p className="eyebrow">Startup Management</p>
-          <h1>Course Portal</h1>
-        </div>
-        <div className="topbar-actions">
-          <span className="status-badge">@{user.username}</span>
-          <button type="button" className="logout-btn" onClick={logout}>Log out</button>
-        </div>
-      </header>
-
-      <main className="content-grid">
-        <section className="panel form-panel">
-          <div className="form-heading">
-            <h2>{editingCourseId ? 'Edit course' : 'Add a new course'}</h2>
-            <button type="button" className="ai-btn" onClick={handleAiSuggest} disabled={loading || aiLoading}>
-              {aiLoading ? 'Thinking...' : 'Suggest with AI'}
-            </button>
-          </div>
-          <p className="ai-hint">Start with a topic, or let AI draft the course details for you.</p>
-          <form onSubmit={handleSubmit} className="course-form">
-            <label>
-              Course title
-              <input
-                type="text"
-                name="title"
-                value={form.title}
-                onChange={handleChange}
-                placeholder="AI for Founders"
-                required
-              />
-            </label>
-
-            <label>
-              Category
-              <input
-                type="text"
-                name="category"
-                value={form.category}
-                onChange={handleChange}
-                placeholder="Technology"
-                required
-              />
-            </label>
-
-            <label>
-              Description
-              <textarea
-                name="description"
-                value={form.description}
-                onChange={handleChange}
-                placeholder="Describe the training module"
-                required
-              />
-            </label>
-
-            <label>
-              Hours
-              <input
-                type="number"
-                name="hours"
-                value={form.hours}
-                onChange={handleChange}
-                min="1"
-                placeholder="8"
-                required
-              />
-            </label>
-
-            <label>
-              Course resource (optional, max 10MB)
-              <input type="file" name="file" onChange={handleChange} accept=".pdf,.doc,.docx,.ppt,.pptx,.zip,.txt" />
-              {form.file && <span className="file-name">Selected: {form.file.name}</span>}
-            </label>
-
-            <button type="submit" disabled={loading}>
-              {loading ? 'Saving...' : editingCourseId ? 'Update Course' : 'Save Course'}
-            </button>
-            {editingCourseId && (
-              <button type="button" className="cancel-btn" onClick={cancelEditing} disabled={loading}>
-                Cancel editing
+          <h1>{authMode === 'login' ? 'Welcome back' : 'Join the startup community'}</h1>
+          <p className="auth-intro">
+            {authMode === 'login'
+              ? selectedRole === 'founder'
+                ? 'Sign in to manage your startup and continue making progress.'
+                : 'Sign in to mentor founders and manage your mentoring sessions.'
+              : selectedRole === 'admin'
+                ? 'Administrator access is restricted to the Google email configured by the project owner.'
+                : `Create your ${selectedRole} account and join the community.`}
+          </p>
+          <div className="role-picker" role="radiogroup" aria-label="Choose your account role">
+            {accountRoles.map((role, index) => (
+              <button
+                key={role.id}
+                type="button"
+                role="radio"
+                aria-checked={selectedRole === role.id}
+                aria-label={`${role.name}. ${role.description}`}
+                data-role={role.id}
+                tabIndex={selectedRole === role.id ? 0 : -1}
+                className={`role-option ${selectedRole === role.id ? 'selected' : ''}`}
+                onClick={() => {
+                  setSelectedRole(role.id)
+                  setAuthStatus('')
+                }}
+                onKeyDown={(event) => selectRoleWithKeyboard(event, index)}
+              >
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  {role.icon}
+                </svg>
+                <span className="role-option-copy">
+                  <strong>{role.name}</strong>
+                  <span>{role.description}</span>
+                </span>
               </button>
-            )}
-          </form>
-        </section>
-
-        <section className="panel list-panel">
-          <div className="section-header">
-            <h2>Saved courses</h2>
-            <button type="button" className="refresh-btn" onClick={fetchCourses}>
-              Refresh
-            </button>
-          </div>
-
-          <p className="status-text">{status}</p>
-
-          <ul className="course-list">
-            {courses.map((course) => (
-              <li key={course._id} className="course-item">
-                <div>
-                  <h3>{course.title}</h3>
-                  <p className="meta">{course.category} | {course.hours} hours</p>
-                </div>
-                <p>{course.description}</p>
-                {course.fileUrl && (
-                  <a className="file-link" href={`${API_ORIGIN}${course.fileUrl}`} target="_blank" rel="noreferrer">
-                    Open resource: {course.fileName}
-                  </a>
-                )}
-                <div className="course-actions">
-                  <button type="button" className="edit-btn" onClick={() => startEditing(course)} disabled={loading}>
-                    Edit
-                  </button>
-                  <button type="button" className="delete-btn" onClick={() => handleDelete(course)} disabled={loading}>
-                    Delete
-                  </button>
-                </div>
-              </li>
             ))}
-          </ul>
-        </section>
-      </main>
-    </div>
+          </div>
+          {selectedRole === 'admin' && (
+            <p className="config-text">Use the configured administrator Google account. Admin access cannot be self-assigned.</p>
+          )}
+          <form onSubmit={handleAuthSubmit} className="course-form auth-form">
+            {authMode === 'register' && (
+              <>
+                <label htmlFor="auth-name">Full name
+                  <input id="auth-name" name="name" value={authForm.name} onChange={(event) => setAuthForm({ ...authForm, name: event.target.value })} autoComplete="name" required />
+                </label>
+                <label htmlFor="auth-email">Email address
+                  <input id="auth-email" type="email" name="email" value={authForm.email} onChange={(event) => setAuthForm({ ...authForm, email: event.target.value })} autoComplete="email" required />
+                </label>
+              </>
+            )}
+            <label htmlFor="auth-username">Username
+              <input id="auth-username" name="username" value={authForm.username} onChange={(event) => setAuthForm({ ...authForm, username: event.target.value })} minLength="3" maxLength="20" pattern="[A-Za-z0-9_]{3,20}" autoComplete="username" required />
+            </label>
+            <label htmlFor="auth-password">Password
+              <span className="password-field">
+                <input id="auth-password" type={showPassword ? 'text' : 'password'} name="password" value={authForm.password} onChange={(event) => setAuthForm({ ...authForm, password: event.target.value })} minLength="8" autoComplete={authMode === 'login' ? 'current-password' : 'new-password'} required />
+                <button className="password-toggle" type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword}>
+                  {showPassword ? 'Hide' : 'Show'}
+                </button>
+              </span>
+            </label>
+            {authMode === 'register' && (
+              <label htmlFor="auth-confirm-password">Confirm password
+                <input id="auth-confirm-password" type={showPassword ? 'text' : 'password'} name="confirmPassword" value={authForm.confirmPassword} onChange={(event) => setAuthForm({ ...authForm, confirmPassword: event.target.value })} autoComplete="new-password" aria-invalid={Boolean(authStatus && authForm.password !== authForm.confirmPassword)} required />
+              </label>
+            )}
+            <button className="auth-submit" type="submit" disabled={loading} aria-busy={loading}>
+              {loading && <span className="auth-spinner" aria-hidden="true" />}
+              {loading ? (authMode === 'login' ? 'Signing in…' : 'Creating account…') : authMode === 'login' ? 'Sign in' : 'Create account'}
+            </button>
+            {authStatus && <p className="error-text auth-message" role="alert" aria-live="polite">{authStatus}</p>}
+          </form>
+          {googleClientId && (
+            <>
+              <div className="auth-divider"><span>or</span></div>
+              <GoogleSignIn
+                clientId={googleClientId}
+                onCredential={handleGoogleCredential}
+                onError={(message) => setAuthStatus(message)}
+              />
+            </>
+          )}
+          <p className="auth-switch">
+            {authMode === 'login' ? 'New to the platform?' : 'Already part of the community?'}
+            {' '}
+            <button type="button" className="link-btn" onClick={() => {
+              setAuthMode(authMode === 'login' ? 'register' : 'login')
+              setAuthStatus('')
+            }}>
+              {authMode === 'login' ? 'Create an account' : 'Sign in'}
+            </button>
+          </p>
+        </div>
+      </section>
+    </main>
   )
 }
 

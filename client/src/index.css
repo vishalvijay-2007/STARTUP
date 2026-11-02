@@ -2,8 +2,8 @@
   font-family: Inter, 'Segoe UI', sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color: #0f172a;
-  background: linear-gradient(135deg, #eef2ff 0%, #f8fafc 100%);
+  color: #172033;
+  background: #f7f8fc;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -36,4 +36,3 @@ h3,
 p {
   margin-top: 0;
 }
-
