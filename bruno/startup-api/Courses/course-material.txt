@@ -1,1 +1,0 @@
-Sample course material for the Bruno multipart upload request.
