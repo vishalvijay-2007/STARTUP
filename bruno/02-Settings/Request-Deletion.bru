@@ -1,0 +1,50 @@
+meta {
+  name: Request Account Deletion
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{baseUrl}}/api/settings/delete-request
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "confirmation": "DELETE MY ACCOUNT"
+  }
+}
+
+docs {
+  # Request Account Deletion
+  Initiate a permanent 30-day compliance account deletion workflow.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Founder
+- Mentor
+
+  ### Response Status Codes
+  - `200` - Deletion request scheduled.
+  - `400` - Invalid confirmation phrase.
+
+  ### Response Example (200)
+  ```json
+  {
+    "success": true,
+    "message": "Account deletion request queued for 30-day holding period."
+  }
+  ```
+}

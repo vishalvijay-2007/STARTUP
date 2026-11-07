@@ -1,0 +1,48 @@
+meta {
+  name: Get Cohorts
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/api/cohorts
+  body: none
+  auth: bearer
+}
+
+headers {
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Get Cohorts
+  List incubation batches and cohorts with funding allocations and dates.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Founder
+- Mentor
+- Admin
+
+  ### Response Status Codes
+  - `200` - Cohorts list returned.
+
+  ### Response Example (200)
+  ```json
+  [
+    {
+      "id": "coh_2026_q4",
+      "name": "Chennai Winter Cohort 2026",
+      "seedGrantINR": 1000000,
+      "startDate": "2026-11-01",
+      "status": "in-progress"
+    }
+  ]
+  ```
+}

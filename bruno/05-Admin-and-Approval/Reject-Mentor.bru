@@ -1,0 +1,49 @@
+meta {
+  name: Reject Mentor Application
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/admin/mentor-applications/:id/reject
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "reason": "Domain focus does not align with current cohort requirements."
+  }
+}
+
+docs {
+  # Reject Mentor Application
+  Reject a pending mentor application with documented audit reason.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Admin
+
+  ### Response Status Codes
+  - `200` - Application rejected.
+  - `403` - Admin access required.
+
+  ### Response Example (200)
+  ```json
+  {
+    "success": true,
+    "message": "Mentor application marked as rejected."
+  }
+  ```
+}

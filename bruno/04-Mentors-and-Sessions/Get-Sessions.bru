@@ -1,0 +1,49 @@
+meta {
+  name: Get Mentorship Sessions
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/sessions
+  body: none
+  auth: bearer
+}
+
+headers {
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Get Mentorship Sessions
+  Get scheduled and completed mentorship 1-on-1 sessions.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Founder
+- Mentor
+- Admin
+
+  ### Response Status Codes
+  - `200` - Sessions list returned.
+
+  ### Response Example (200)
+  ```json
+  [
+    {
+      "id": "ses_1",
+      "mentorName": "Dr. Ramesh Sundaram",
+      "startupName": "BharatMed HealthTech",
+      "scheduledAt": "2026-11-12T14:00:00.000Z",
+      "status": "confirmed",
+      "meetingLink": "https://meet.google.com/xyz-abc-def"
+    }
+  ]
+  ```
+}

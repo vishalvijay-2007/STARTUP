@@ -1,0 +1,47 @@
+meta {
+  name: Get Platform Financial Analytics
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/analytics
+  body: none
+  auth: bearer
+}
+
+headers {
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Get Platform Financial Analytics
+  Fetch aggregate incubator performance metrics formatted in Indian Rupees (INR ₹).
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Founder
+- Mentor
+- Admin
+
+  ### Response Status Codes
+  - `200` - Analytics object with INR totals and trends returned.
+
+  ### Response Example (200)
+  ```json
+  {
+    "currency": "INR",
+    "locale": "en-IN",
+    "totalFundingRaisedINR": 125000000,
+    "averageValuationINR": 35000000,
+    "cohortsActive": 6,
+    "monthlyGrowthPercent": 18.4
+  }
+  ```
+}

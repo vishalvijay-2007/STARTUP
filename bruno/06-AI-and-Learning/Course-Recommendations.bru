@@ -1,0 +1,63 @@
+meta {
+  name: Generate AI Course Recommendations
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/ai/course-recommendations
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "industry": "FinTech",
+    "startupStage": "Seed Stage",
+    "learningGoals": "Master RBI digital lending guidelines and Indian unit economics."
+  }
+}
+
+docs {
+  # Generate AI Course Recommendations
+  Leverage Google Gemini AI to analyze startup context and recommend tailored incubation courses.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Founder
+- Mentor
+- Admin
+
+  ### Response Status Codes
+  - `200` - Recommended courses returned with syllabus and rationale.
+  - `500` - AI generation error.
+
+  ### Response Example (200)
+  ```json
+  {
+    "success": true,
+    "courses": [
+      {
+        "id": "crs_rec_1",
+        "title": "FinTech Compliance & RBI Master Directions",
+        "instructor": "Vikram Sethi",
+        "difficulty": "Intermediate",
+        "durationHours": 6,
+        "priceINR": 0,
+        "summary": "Comprehensive guide to compliant NBFC & payment gateway operations in India."
+      }
+    ]
+  }
+  ```
+}

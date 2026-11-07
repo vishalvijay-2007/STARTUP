@@ -1,0 +1,53 @@
+meta {
+  name: Get All Startups
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/startups
+  body: none
+  auth: bearer
+}
+
+headers {
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Get All Startups
+  Retrieve startups filtered by current user or all startups for incubation admins.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Founder
+- Mentor
+- Admin
+
+  ### Response Status Codes
+  - `200` - Startups list in Indian Rupees (INR ₹) returned.
+  - `401` - Unauthorized.
+
+  ### Response Example (200)
+  ```json
+  [
+    {
+      "id": "stp_101",
+      "name": "BharatMed HealthTech",
+      "industry": "HealthTech",
+      "stage": "Seed Stage",
+      "fundingRaisedINR": 8500000,
+      "valuationINR": 42000000,
+      "currency": "INR",
+      "founderId": "usr_founder_01",
+      "location": "Chennai, Tamil Nadu, India"
+    }
+  ]
+  ```
+}

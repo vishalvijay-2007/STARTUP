@@ -1,0 +1,50 @@
+meta {
+  name: Deactivate Account
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/api/settings/deactivate
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "reason": "Taking a temporary sabbatical"
+  }
+}
+
+docs {
+  # Deactivate Account
+  Temporarily deactivate the account while retaining startup and milestone records.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Founder
+- Mentor
+
+  ### Response Status Codes
+  - `200` - Account deactivated.
+  - `401` - Unauthorized.
+
+  ### Response Example (200)
+  ```json
+  {
+    "success": true,
+    "message": "Your account has been deactivated."
+  }
+  ```
+}

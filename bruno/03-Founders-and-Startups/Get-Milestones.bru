@@ -1,0 +1,49 @@
+meta {
+  name: Get Milestones
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/api/milestones
+  body: none
+  auth: bearer
+}
+
+headers {
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Get Milestones
+  Fetch the roadmap of milestones, deliverables, and completion status.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Founder
+- Mentor
+- Admin
+
+  ### Response Status Codes
+  - `200` - Milestones returned.
+
+  ### Response Example (200)
+  ```json
+  [
+    {
+      "id": "mls_1",
+      "title": "Complete MVP Beta Launch in Chennai",
+      "dueDate": "2026-12-15",
+      "completed": true,
+      "startupId": "stp_101",
+      "rewardBudgetINR": 500000
+    }
+  ]
+  ```
+}

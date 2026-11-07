@@ -1,0 +1,61 @@
+meta {
+  name: Update Account Settings
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/settings/account
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "username": "vishal1232",
+    "email": "vishal1232@gmail.com",
+    "language": "en-IN",
+    "timezone": "UTC+05:30"
+  }
+}
+
+docs {
+  # Update Account Settings
+  Persist account-level preferences including language and timezone.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Founder
+- Mentor
+- Admin
+
+  ### Request Body Fields
+  - `username` (string) - Preferred handle.
+  - `email` (string) - Notification and login email.
+  - `language` (string) - Selected UI language locale.
+  - `timezone` (string) - User timezone (e.g. UTC+05:30 IST).
+
+  ### Response Status Codes
+  - `200` - Account settings updated.
+  - `400` - Invalid timezone or language format.
+  - `401` - Unauthorized.
+
+  ### Response Example (200)
+  ```json
+  {
+    "success": true,
+    "message": "Account settings saved."
+  }
+  ```
+}

@@ -1,0 +1,52 @@
+meta {
+  name: AI Startup Assistant Chat/Generate
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/api/ai/generate
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "prompt": "Provide a breakdown of GST compliance and DPIIT Startup India tax exemption benefits in INR.",
+    "context": "Chennai AgriTech startup in early scaling stage."
+  }
+}
+
+docs {
+  # AI Startup Assistant Chat/Generate
+  Interactive AI Startup Assistant providing real-time strategic, financial (INR), and incubation advice.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Founder
+- Mentor
+- Admin
+
+  ### Response Status Codes
+  - `200` - AI response stream or markdown text returned.
+  - `500` - AI engine failure.
+
+  ### Response Example (200)
+  ```json
+  {
+    "success": true,
+    "result": "Under Section 80-IAC of the Income Tax Act, eligible DPIIT-recognized startups can claim a 100% tax holiday on profits for 3 consecutive years..."
+  }
+  ```
+}

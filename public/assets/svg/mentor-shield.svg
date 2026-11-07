@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" fill="none" width="100%" height="100%">
+  <defs>
+    <linearGradient id="shieldGrad" x1="60" y1="30" x2="180" y2="210" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#7B66FF"/>
+      <stop offset="100%" stop-color="#4F3FD9"/>
+    </linearGradient>
+    <filter id="shieldShadow" x="-20%" y="-20%" width="140%" height="140%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#6355F4" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- Ambient Outer Glow Ring -->
+  <circle cx="120" cy="115" r="95" stroke="#6355F4" stroke-opacity="0.12" stroke-width="2" stroke-dasharray="8 6"/>
+
+  <!-- Main Shield -->
+  <g filter="url(#shieldShadow)">
+    <path d="M120 30 C155 30 190 42 190 75 C190 135 155 185 120 205 C85 185 50 135 50 75 C50 42 85 30 120 30 Z" fill="url(#shieldGrad)"/>
+    <path d="M120 38 C148 38 178 48 178 77 C178 128 148 172 120 190 C92 172 62 128 62 77 C62 48 92 38 120 38 Z" stroke="#FFFFFF" stroke-opacity="0.25" stroke-width="2" fill="none"/>
+
+    <!-- Checkmark & Star Icon -->
+    <path d="M96 114 L112 130 L146 96" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Ribbon Banner -->
+  <g transform="translate(45, 175)">
+    <rect width="150" height="32" rx="10" fill="#2E2084"/>
+    <text x="75" y="21" font-family="system-ui, sans-serif" font-size="11" font-weight="800" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">VETTED MENTOR</text>
+  </g>
+</svg>

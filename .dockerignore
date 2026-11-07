@@ -1,0 +1,36 @@
+# Dependency directories
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.npm/
+
+# Git and Version Control
+.git/
+.gitignore
+.github/
+
+# Secret and local environment files
+.env
+.env.*
+!.env.example
+
+# Build outputs and caches
+dist/
+build/
+.vite/
+.cache/
+server.js
+
+# Temporary files and system metadata
+.DS_Store
+Thumbs.db
+*.tmp
+*.bak
+*.swp
+*.log
+
+# IDE and platform internals
+.aistudio/
+public/assets/aistudio/

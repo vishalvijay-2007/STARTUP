@@ -1,0 +1,43 @@
+meta {
+  name: Mark Notification Read
+  type: http
+  seq: 2
+}
+
+put {
+  url: {{baseUrl}}/api/notifications/:id/read
+  body: none
+  auth: bearer
+}
+
+headers {
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Mark Notification Read
+  Mark a specific notification as read.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Founder
+- Mentor
+- Admin
+
+  ### Response Status Codes
+  - `200` - Notification marked read.
+
+  ### Response Example (200)
+  ```json
+  {
+    "success": true,
+    "read": true
+  }
+  ```
+}

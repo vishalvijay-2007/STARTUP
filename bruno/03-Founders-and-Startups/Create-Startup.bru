@@ -1,0 +1,71 @@
+meta {
+  name: Register New Startup
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/startups
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "name": "KaapiPay FinTech",
+    "industry": "FinTech",
+    "stage": "Early Stage",
+    "pitch": "UPI-powered seamless micro-transactions for small retailers.",
+    "fundingRaisedINR": 2500000,
+    "monthlyBurnINR": 180000,
+    "location": "Chennai, Tamil Nadu, India"
+  }
+}
+
+docs {
+  # Register New Startup
+  Create a new startup venture under the incubation program.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Founder
+- Admin
+
+  ### Request Body Fields
+  - `name` (string, required) - Startup legal or brand name.
+  - `industry` (string, required) - Domain sector (e.g. AgriTech, FinTech, HealthTech).
+  - `stage` (string, required) - Stage ("Idea", "Early Stage", "Seed", "Series A").
+  - `fundingRaisedINR` (number) - Total funding raised in Indian Rupees.
+  - `monthlyBurnINR` (number) - Monthly expenses/burn in Indian Rupees.
+
+  ### Response Status Codes
+  - `201` - Startup registered in database.
+  - `400` - Missing required parameters.
+  - `401` - Unauthorized.
+
+  ### Response Example (201)
+  ```json
+  {
+    "success": true,
+    "startup": {
+      "id": "stp_102",
+      "name": "KaapiPay FinTech",
+      "industry": "FinTech",
+      "stage": "Early Stage",
+      "currency": "INR",
+      "fundingRaisedINR": 2500000
+    }
+  }
+  ```
+}

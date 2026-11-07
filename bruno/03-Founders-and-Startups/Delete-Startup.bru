@@ -1,0 +1,44 @@
+meta {
+  name: Delete Startup
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{baseUrl}}/api/startups/:id
+  body: none
+  auth: bearer
+}
+
+headers {
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Delete Startup
+  Remove a startup entry and archive associated records.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Founder (Owner)
+- Admin
+
+  ### Response Status Codes
+  - `200` - Startup deleted.
+  - `403` - Forbidden. Non-owners cannot delete.
+  - `404` - Startup not found.
+
+  ### Response Example (200)
+  ```json
+  {
+    "success": true,
+    "message": "Startup deleted successfully."
+  }
+  ```
+}

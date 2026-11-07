@@ -1,0 +1,62 @@
+meta {
+  name: Update Notification Settings
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/settings/notifications
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "emailNotifications": true,
+    "mentorReminders": true,
+    "milestoneUpdates": true,
+    "resourceAnnouncements": true,
+    "workspaceActivity": true
+  }
+}
+
+docs {
+  # Update Notification Settings
+  Configure granular notification triggers for email, mentors, and milestones.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Founder
+- Mentor
+- Admin
+
+  ### Request Body Fields
+  - `emailNotifications` (boolean)
+  - `mentorReminders` (boolean)
+  - `milestoneUpdates` (boolean)
+  - `resourceAnnouncements` (boolean)
+  - `workspaceActivity` (boolean)
+
+  ### Response Status Codes
+  - `200` - Notification preferences updated.
+  - `401` - Unauthorized.
+
+  ### Response Example (200)
+  ```json
+  {
+    "success": true,
+    "message": "Notification settings saved."
+  }
+  ```
+}

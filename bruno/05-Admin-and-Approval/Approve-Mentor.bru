@@ -1,0 +1,50 @@
+meta {
+  name: Approve Mentor Application
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/admin/mentor-applications/:id/approve
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "notes": "Approved. Assigned to DeepTech Chennai track."
+  }
+}
+
+docs {
+  # Approve Mentor Application
+  Approve a pending mentor application, activating their account and granting access to the Mentor Dashboard.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Admin
+
+  ### Response Status Codes
+  - `200` - Mentor successfully approved and activated.
+  - `403` - Admin access required.
+  - `404` - Application not found.
+
+  ### Response Example (200)
+  ```json
+  {
+    "success": true,
+    "message": "Mentor application approved. Account is now active."
+  }
+  ```
+}

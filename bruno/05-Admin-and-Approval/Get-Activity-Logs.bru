@@ -1,0 +1,47 @@
+meta {
+  name: Get Platform Activity Logs
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/api/admin/activity
+  body: none
+  auth: bearer
+}
+
+headers {
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Get Platform Activity Logs
+  Audit log trail tracking logins, approvals, registrations, and milestones.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Admin
+
+  ### Response Status Codes
+  - `200` - Activity logs array returned.
+
+  ### Response Example (200)
+  ```json
+  [
+    {
+      "id": "act_101",
+      "userName": "Admin Office",
+      "role": "admin",
+      "action": "MENTOR_APPROVED",
+      "details": "Approved Dr. Ramesh Sundaram for FinTech track",
+      "timestamp": "2026-11-06T09:12:00.000Z"
+    }
+  ]
+  ```
+}

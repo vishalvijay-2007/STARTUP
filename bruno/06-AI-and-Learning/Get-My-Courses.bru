@@ -1,0 +1,47 @@
+meta {
+  name: Get Enrolled Courses
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/ai/my-courses
+  body: none
+  auth: bearer
+}
+
+headers {
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Get Enrolled Courses
+  List courses saved or enrolled by the authenticated founder.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Founder
+- Mentor
+- Admin
+
+  ### Response Status Codes
+  - `200` - User enrolled courses list.
+
+  ### Response Example (200)
+  ```json
+  [
+    {
+      "id": "enr_1",
+      "courseTitle": "FinTech Compliance & RBI Master Directions",
+      "progressPercent": 40,
+      "status": "in-progress"
+    }
+  ]
+  ```
+}

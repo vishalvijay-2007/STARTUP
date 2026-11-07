@@ -1,0 +1,49 @@
+meta {
+  name: Update Course Progress
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{baseUrl}}/api/ai/my-courses/:id
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "progressPercent": 100,
+    "status": "completed"
+  }
+}
+
+docs {
+  # Update Course Progress
+  Update completion percentage or mark a course completed.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Founder
+
+  ### Response Status Codes
+  - `200` - Progress updated.
+
+  ### Response Example (200)
+  ```json
+  {
+    "success": true,
+    "progressPercent": 100
+  }
+  ```
+}

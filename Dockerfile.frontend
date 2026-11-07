@@ -1,0 +1,54 @@
+# ==============================================================================
+# Multi-Stage Production Dockerfile for Frontend (Vite + React + Tailwind)
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Stage 1: Build Frontend Assets
+# ------------------------------------------------------------------------------
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Install build dependencies
+COPY package.json ./
+RUN npm install
+
+# Copy application source code
+COPY . .
+
+# Optional Build-time arguments for frontend environment injection
+ARG VITE_GOOGLE_CLIENT_ID
+ARG VITE_API_BASE_URL
+ENV VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+
+# Build static client bundles to /app/dist
+RUN npx vite build
+
+# ------------------------------------------------------------------------------
+# Stage 2: Production Web Server (High-Performance Nginx Alpine)
+# ------------------------------------------------------------------------------
+FROM nginx:1.27-alpine AS runner
+
+# Remove default Nginx website
+RUN rm -rf /usr/share/nginx/html/*
+
+# Copy built frontend assets from builder stage
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copy custom Nginx configuration (SPA routing, SVG gzip, API proxying)
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Security & Permissions
+RUN chown -R nginx:nginx /usr/share/nginx/html && \
+    chmod -R 755 /usr/share/nginx/html
+
+# Frontend web server port
+EXPOSE 80
+
+# Production Health Check
+HEALTHCHECK --interval=20s --timeout=5s --start-period=5s --retries=3 \
+  CMD wget -qO- http://localhost:80/healthz || exit 1
+
+# Start Nginx in foreground
+CMD ["nginx", "-g", "daemon off;"]

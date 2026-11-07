@@ -1,0 +1,52 @@
+meta {
+  name: Update Startup Details
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{baseUrl}}/api/startups/:id
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "fundingRaisedINR": 5000000,
+    "stage": "Seed Stage",
+    "monthlyBurnINR": 250000
+  }
+}
+
+docs {
+  # Update Startup Details
+  Update valuation, funding, stage, or operational details of an incubated startup.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Founder (Owner)
+- Admin
+
+  ### Response Status Codes
+  - `200` - Startup successfully updated.
+  - `404` - Startup ID not found.
+
+  ### Response Example (200)
+  ```json
+  {
+    "success": true,
+    "message": "Startup details updated."
+  }
+  ```
+}

@@ -1,0 +1,49 @@
+meta {
+  name: Activate or Suspend Mentor
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/admin/mentors/:id/status
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "status": "active"
+  }
+}
+
+docs {
+  # Activate or Suspend Mentor
+  Change an approved mentor status between active and suspended.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Admin
+
+  ### Response Status Codes
+  - `200` - Mentor status changed.
+  - `403` - Admin access required.
+
+  ### Response Example (200)
+  ```json
+  {
+    "success": true,
+    "status": "active"
+  }
+  ```
+}

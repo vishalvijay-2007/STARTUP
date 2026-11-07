@@ -1,0 +1,48 @@
+meta {
+  name: Export Account Data
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/api/settings/export-data
+  body: none
+  auth: bearer
+}
+
+headers {
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Export Account Data
+  Export all account activity, startups, and settings in compliance with data privacy regulations.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Founder
+- Mentor
+- Admin
+
+  ### Response Status Codes
+  - `200` - Account JSON dump payload returned.
+  - `401` - Unauthorized.
+
+  ### Response Example (200)
+  ```json
+  {
+    "user": {
+      "id": "usr_founder_01",
+      "name": "Vishal Kumar"
+    },
+    "startups": [],
+    "exportedAt": "2026-11-06T10:00:00.000Z"
+  }
+  ```
+}

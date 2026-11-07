@@ -1,0 +1,72 @@
+services:
+  # ============================================================================
+  # Backend API Service (Node.js + Express)
+  # ============================================================================
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: startup-incubation-backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATA_DIR=/app/data
+      - APP_URL=${APP_URL:-http://localhost:80}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - JWT_SECRET=${JWT_SECRET:-incubator_production_jwt_secret_change_in_production}
+      - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
+    volumes:
+      # Persistent storage volume for database state (INR financials, startups, users)
+      - incubator_data:/app/data
+    networks:
+      - incubator_network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ============================================================================
+  # Frontend Web Service (Vite React SPA + Nginx Reverse Proxy)
+  # ============================================================================
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
+        - VITE_API_BASE_URL=${VITE_API_BASE_URL:-}
+    container_name: startup-incubation-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "8080:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - incubator_network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:80/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+# ==============================================================================
+# Persistent Named Volumes
+# ==============================================================================
+volumes:
+  incubator_data:
+    driver: local
+
+# ==============================================================================
+# Isolated Bridge Network
+# ==============================================================================
+networks:
+  incubator_network:
+    driver: bridge

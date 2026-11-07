@@ -1,0 +1,59 @@
+meta {
+  name: Schedule Mentorship Session
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/sessions
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "mentorId": "usr_mentor_1",
+    "startupId": "stp_101",
+    "topic": "Financial Model Review & INR Cash Runway",
+    "scheduledAt": "2026-11-20T11:00:00.000Z",
+    "durationMinutes": 45
+  }
+}
+
+docs {
+  # Schedule Mentorship Session
+  Book a 1-on-1 advisory session between a founder and an approved mentor.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Founder
+- Mentor
+- Admin
+
+  ### Response Status Codes
+  - `201` - Session created and calendar invite dispatched.
+  - `400` - Time conflict or missing params.
+
+  ### Response Example (201)
+  ```json
+  {
+    "success": true,
+    "session": {
+      "id": "ses_2",
+      "topic": "Financial Model Review & INR Cash Runway",
+      "status": "scheduled"
+    }
+  }
+  ```
+}

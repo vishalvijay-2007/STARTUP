@@ -1,0 +1,54 @@
+meta {
+  name: Toggle Milestone Status
+  type: http
+  seq: 7
+}
+
+put {
+  url: {{baseUrl}}/api/milestones/:id
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "completed": true
+  }
+}
+
+docs {
+  # Toggle Milestone Status
+  Toggle milestone completion status (completed / in-progress).
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Founder
+- Mentor
+- Admin
+
+  ### Response Status Codes
+  - `200` - Milestone status updated.
+  - `404` - Milestone ID not found.
+
+  ### Response Example (200)
+  ```json
+  {
+    "success": true,
+    "milestone": {
+      "id": "mls_2",
+      "completed": true
+    }
+  }
+  ```
+}

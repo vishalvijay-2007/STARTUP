@@ -1,0 +1,67 @@
+meta {
+  name: Update User Profile
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/auth/update-profile
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "name": "Vishal Kumar",
+    "email": "vishal1232@gmail.com",
+    "phone": "+91 94440 12345",
+    "bio": "Building SaaS and AI solutions for Indian startups from Chennai."
+  }
+}
+
+docs {
+  # Update User Profile
+  Update the authenticated user profile information in the database.
+
+  ### Authentication
+  Bearer Token (Session authenticated)
+
+  ### Allowed Roles
+  - Founder
+- Mentor
+- Admin
+
+  ### Request Body Fields
+  - `name` (string) - Full legal or display name.
+  - `email` (string) - Updated email address.
+  - `phone` (string) - Contact mobile number.
+  - `bio` (string) - Biography or background summary.
+
+  ### Response Status Codes
+  - `200` - Profile updated in database.
+  - `401` - Unauthorized or missing token.
+  - `500` - Database write error.
+
+  ### Response Example (200)
+  ```json
+  {
+    "success": true,
+    "user": {
+      "id": "usr_founder_01",
+      "name": "Vishal Kumar",
+      "email": "vishal1232@gmail.com",
+      "phone": "+91 94440 12345",
+      "bio": "Building SaaS and AI solutions for Indian startups from Chennai."
+    }
+  }
+  ```
+}

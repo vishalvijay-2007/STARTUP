@@ -1,0 +1,55 @@
+meta {
+  name: Toggle Two-Factor Authentication
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/settings/2fa/toggle
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "enabled": true
+  }
+}
+
+docs {
+  # Toggle Two-Factor Authentication
+  Enable or disable Two-Factor Authentication (2FA) for this account.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Founder
+- Mentor
+- Admin
+
+  ### Request Body Fields
+  - `enabled` (boolean, required) - True to activate 2FA, false to deactivate.
+
+  ### Response Status Codes
+  - `200` - 2FA preference updated.
+  - `401` - Unauthorized.
+
+  ### Response Example (200)
+  ```json
+  {
+    "success": true,
+    "twoFactorEnabled": true,
+    "message": "Two-factor authentication enabled."
+  }
+  ```
+}

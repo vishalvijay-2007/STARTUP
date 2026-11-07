@@ -1,0 +1,44 @@
+meta {
+  name: Revoke Other Sessions
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/settings/sessions/logout-others
+  body: none
+  auth: bearer
+}
+
+headers {
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Revoke Other Sessions
+  Revoke all other active login tokens and sessions across other devices.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Founder
+- Mentor
+- Admin
+
+  ### Response Status Codes
+  - `200` - All other sessions terminated.
+  - `401` - Unauthorized.
+
+  ### Response Example (200)
+  ```json
+  {
+    "success": true,
+    "message": "All other active sessions have been logged out."
+  }
+  ```
+}

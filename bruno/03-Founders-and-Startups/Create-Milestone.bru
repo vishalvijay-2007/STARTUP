@@ -1,0 +1,59 @@
+meta {
+  name: Create Milestone
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/milestones
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "title": "Acquire First 100 Paying Indian Customers",
+    "description": "Launch B2B sales outreach and convert free tier accounts.",
+    "dueDate": "2027-01-31",
+    "startupId": "stp_101",
+    "budgetINR": 150000
+  }
+}
+
+docs {
+  # Create Milestone
+  Add a new roadmap milestone for tracking incubation progress.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Founder
+- Mentor
+- Admin
+
+  ### Response Status Codes
+  - `201` - Milestone created.
+  - `400` - Missing required title or startup ID.
+
+  ### Response Example (201)
+  ```json
+  {
+    "success": true,
+    "milestone": {
+      "id": "mls_2",
+      "title": "Acquire First 100 Paying Indian Customers",
+      "completed": false
+    }
+  }
+  ```
+}

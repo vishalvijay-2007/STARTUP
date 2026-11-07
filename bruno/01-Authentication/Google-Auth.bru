@@ -1,0 +1,57 @@
+meta {
+  name: Google OAuth Single Sign-On
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/auth/google
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "credential": "google_oauth_client_credential_token",
+    "role": "founder"
+  }
+}
+
+docs {
+  # Google OAuth Single Sign-On
+  Sign in or register automatically using a verified Google Account credential token.
+
+  ### Authentication
+  Public (Google ID token / client payload)
+
+  ### Allowed Roles
+  - Guest
+
+  ### Request Body Fields
+  - `credential` (string, required) - Google ID token or OAuth response credential.
+  - `role` (string, optional) - Requested role if creating a new user.
+
+  ### Response Status Codes
+  - `200` - Google sign-in verified and session created.
+  - `400` - Invalid Google credential token.
+  - `403` - Account is currently suspended or awaiting approval.
+  - `500` - Internal server error.
+
+  ### Response Example (200)
+  ```json
+  {
+    "success": true,
+    "user": {
+      "id": "usr_google_01",
+      "name": "Rohan Verma",
+      "email": "rohan.verma@gmail.com",
+      "role": "founder",
+      "avatar": "https://lh3.googleusercontent.com/a/sample-avatar"
+    }
+  }
+  ```
+}

@@ -1,0 +1,68 @@
+meta {
+  name: Run AI Startup Analysis
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/ai/startup-analysis
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "startupName": "BharatMed HealthTech",
+    "industry": "HealthTech",
+    "monthlyRevenueINR": 450000,
+    "monthlyBurnINR": 320000,
+    "runwayMonths": 14,
+    "targetMarket": "Tier-2 and Tier-3 hospitals across Tamil Nadu and South India"
+  }
+}
+
+docs {
+  # Run AI Startup Analysis
+  Run comprehensive AI strategic assessment evaluating runway, TAM, threats, and Indian market product-market fit.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Founder
+- Mentor
+- Admin
+
+  ### Response Status Codes
+  - `200` - Detailed AI diagnosis, SWOT, and recommendations returned.
+  - `500` - AI generation error.
+
+  ### Response Example (200)
+  ```json
+  {
+    "success": true,
+    "analysis": {
+      "id": "ana_101",
+      "healthScore": 84,
+      "strengths": [
+        "Positive gross margin",
+        "High defensibility in Tier-2 Indian cities"
+      ],
+      "runwayAssessment": "14 months runway in INR provides adequate buffer for Seed extension.",
+      "actionItems": [
+        "File patent with Indian Patent Office",
+        "Onboard 15 additional clinics"
+      ]
+    }
+  }
+  ```
+}

@@ -1,0 +1,68 @@
+# ==============================================================================
+# Multi-Stage Production Dockerfile for Backend (Node.js + Express API)
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Stage 1: Build Backend Server Bundle
+# ------------------------------------------------------------------------------
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Install all dependencies (including esbuild and typescript)
+COPY package.json ./
+RUN npm install
+
+# Copy application source code
+COPY . .
+
+# Bundle server.ts into self-contained ESM executable dist/server.js
+RUN npx esbuild server.ts --bundle --platform=node --format=esm --packages=external --outfile=dist/server.js
+
+# ------------------------------------------------------------------------------
+# Stage 2: Production Execution Image (Non-Root, Hardened)
+# ------------------------------------------------------------------------------
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+# Production environment variables
+ENV NODE_ENV=production \
+    PORT=3000 \
+    DATA_DIR=/app/data
+
+# Install dumb-init for proper signal handling and PID 1 zombie reaper, and wget for healthchecks
+RUN apk add --no-cache dumb-init wget
+
+# Create unprivileged system group and user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001 -G nodejs
+
+# Install only production dependencies
+COPY package.json ./
+RUN npm install --omit=dev --ignore-scripts && \
+    npm cache clean --force
+
+# Copy compiled backend bundle from builder stage
+COPY --from=builder /app/dist/server.js ./dist/server.js
+COPY server/ ./server/
+
+# Prepare data storage volume directory with non-root ownership
+RUN mkdir -p /app/data && \
+    chown -R nodejs:nodejs /app
+
+# Switch to non-root user
+USER nodejs
+
+# Backend Express port
+EXPOSE 3000
+
+# Container Health Probe checking real database connectivity and uptime
+HEALTHCHECK --interval=20s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget -qO- http://localhost:3000/api/health || exit 1
+
+# Process supervisor
+ENTRYPOINT ["dumb-init", "--"]
+
+# Launch compiled backend server
+CMD ["node", "dist/server.js"]

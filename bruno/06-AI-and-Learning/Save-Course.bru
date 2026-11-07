@@ -1,0 +1,52 @@
+meta {
+  name: Enroll or Save Course
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/ai/save-course
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "courseId": "crs_rec_1",
+    "title": "FinTech Compliance & RBI Master Directions",
+    "difficulty": "Intermediate"
+  }
+}
+
+docs {
+  # Enroll or Save Course
+  Save or enroll in an incubation learning course.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Founder
+- Mentor
+- Admin
+
+  ### Response Status Codes
+  - `200` - Course saved to user profile.
+
+  ### Response Example (200)
+  ```json
+  {
+    "success": true,
+    "message": "Course saved to enrolled library."
+  }
+  ```
+}

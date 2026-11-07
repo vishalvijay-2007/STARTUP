@@ -1,0 +1,49 @@
+meta {
+  name: Get Pending Mentor Applications
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/admin/mentor-applications
+  body: none
+  auth: bearer
+}
+
+headers {
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Get Pending Mentor Applications
+  List all mentor applications awaiting approval or review by incubator staff.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Admin
+
+  ### Response Status Codes
+  - `200` - Pending applications array returned.
+  - `403` - Admin access required.
+
+  ### Response Example (200)
+  ```json
+  [
+    {
+      "id": "usr_mentor_app_1",
+      "name": "Ananya Krishnan",
+      "email": "ananya.k@iitm.ac.in",
+      "domain": "DeepTech / AI",
+      "yearsExperience": 14,
+      "status": "pending",
+      "appliedAt": "2026-11-04T12:00:00.000Z"
+    }
+  ]
+  ```
+}

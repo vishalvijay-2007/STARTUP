@@ -1,0 +1,55 @@
+meta {
+  name: Create Incubation Cohort
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/api/cohorts
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "name": "Spring 2027 ScaleUp Batch",
+    "startDate": "2027-01-15",
+    "endDate": "2027-06-30",
+    "seedGrantINR": 1500000
+  }
+}
+
+docs {
+  # Create Incubation Cohort
+  Create a new incubation cohort program with grant funding in INR.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Admin
+
+  ### Response Status Codes
+  - `201` - Cohort created.
+  - `403` - Admin access required.
+
+  ### Response Example (201)
+  ```json
+  {
+    "success": true,
+    "cohort": {
+      "id": "coh_2027_q1",
+      "name": "Spring 2027 ScaleUp Batch"
+    }
+  }
+  ```
+}

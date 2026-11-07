@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" fill="none" width="100%" height="100%">
+  <defs>
+    <linearGradient id="rocketGrad" x1="120" y1="60" x2="280" y2="240" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#7B66FF"/>
+      <stop offset="100%" stop-color="#4F3FD9"/>
+    </linearGradient>
+    <linearGradient id="flameGrad" x1="200" y1="210" x2="200" y2="270" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFB020"/>
+      <stop offset="50%" stop-color="#FF5B5B"/>
+      <stop offset="100%" stop-color="#7B66FF" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="purpleGlow" x="-20%" y="-20%" width="140%" height="140%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#6355F4" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Background Ambient Circles -->
+  <circle cx="200" cy="150" r="120" fill="#6355F4" fill-opacity="0.05"/>
+  <circle cx="200" cy="150" r="85" fill="#6355F4" fill-opacity="0.08"/>
+
+  <!-- Orbital Trajectory Rings -->
+  <ellipse cx="200" cy="160" rx="150" ry="45" stroke="#7B66FF" stroke-width="1.5" stroke-dasharray="6 6" stroke-opacity="0.3" transform="rotate(-20 200 160)"/>
+
+  <!-- Stars -->
+  <circle cx="70" cy="80" r="2.5" fill="#7B66FF" fill-opacity="0.6"/>
+  <circle cx="330" cy="65" r="3" fill="#6355F4" fill-opacity="0.7"/>
+  <circle cx="340" cy="190" r="2" fill="#7B66FF" fill-opacity="0.4"/>
+  <circle cx="60" cy="220" r="3" fill="#6355F4" fill-opacity="0.5"/>
+  <path d="M120 45l2 4 4 2-4 2-2 4-2-4-4-2 4-2z" fill="#7B66FF" fill-opacity="0.6"/>
+  <path d="M280 110l1.5 3 3 1.5-3 1.5-1.5 3-1.5-3-3-1.5 3-1.5z" fill="#FFB020" fill-opacity="0.8"/>
+
+  <!-- Exhaust Plume & Flame -->
+  <g transform="translate(0, 0)">
+    <path d="M185 210 Q200 270 200 280 Q200 270 215 210 Z" fill="url(#flameGrad)"/>
+    <path d="M192 210 Q200 250 200 255 Q200 250 208 210 Z" fill="#FFE082"/>
+  </g>
+
+  <!-- Incubation Launch Cloud -->
+  <path d="M140 260 Q160 230 190 250 Q210 230 235 250 Q260 240 265 265 Q240 285 200 285 Q150 285 140 260 Z" fill="#EDE9FE" fill-opacity="0.7"/>
+
+  <!-- Main Rocket Body -->
+  <g filter="url(#purpleGlow)">
+    <!-- Left Fin -->
+    <path d="M172 175 L145 205 Q142 215 155 215 L175 205 Z" fill="#4F3FD9"/>
+    <!-- Right Fin -->
+    <path d="M228 175 L255 205 Q258 215 245 215 L225 205 Z" fill="#4F3FD9"/>
+    <!-- Center Fuselage -->
+    <path d="M200 70 C175 110 172 165 174 205 L226 205 C228 165 225 110 200 70 Z" fill="url(#rocketGrad)"/>
+    <!-- Nose Cap -->
+    <path d="M200 70 C190 85 186 100 183 115 L217 115 C214 100 210 85 200 70 Z" fill="#FFFFFF" fill-opacity="0.25"/>
+    <!-- Porthole Window -->
+    <circle cx="200" cy="140" r="16" fill="#FFFFFF"/>
+    <circle cx="200" cy="140" r="12" fill="#2E2084"/>
+    <circle cx="200" cy="140" r="9" fill="#6355F4"/>
+    <circle cx="196" cy="136" r="3" fill="#FFFFFF" fill-opacity="0.8"/>
+    <!-- Body Accent Lines -->
+    <rect x="184" y="178" width="32" height="3" rx="1.5" fill="#FFFFFF" fill-opacity="0.4"/>
+    <rect x="188" y="185" width="24" height="2.5" rx="1" fill="#FFFFFF" fill-opacity="0.3"/>
+  </g>
+</svg>

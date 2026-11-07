@@ -1,0 +1,48 @@
+meta {
+  name: Get Incubation Resources
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/resources
+  body: none
+  auth: bearer
+}
+
+headers {
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Get Incubation Resources
+  Browse available incubator hardware, cloud credits, 3D printers, meeting rooms, and legal templates.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Founder
+- Mentor
+- Admin
+
+  ### Response Status Codes
+  - `200` - Resources list returned.
+
+  ### Response Example (200)
+  ```json
+  [
+    {
+      "id": "res_1",
+      "name": "Cloud Computing Credit Grant (₹2,50,000 value)",
+      "category": "Cloud Credits",
+      "availableQuantity": 15,
+      "valueINR": 250000
+    }
+  ]
+  ```
+}

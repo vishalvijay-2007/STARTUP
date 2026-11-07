@@ -1,0 +1,7 @@
+{
+  "name": "Startup Incubation & Management Platform",
+  "description": "AI-powered startup incubation system for founders, mentors, and program administrators to track cohorts, milestones, mentoring sessions, and growth.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

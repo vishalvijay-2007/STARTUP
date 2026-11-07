@@ -1,0 +1,63 @@
+meta {
+  name: User Login
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/auth/login
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "username": "vishal1232@gmail.com",
+    "password": "Password123!",
+    "role": "founder"
+  }
+}
+
+docs {
+  # User Login
+  Authenticate an existing Founder, Mentor, or Admin with username/email and password.
+
+  ### Authentication
+  Public (No authorization header required)
+
+  ### Allowed Roles
+  - Founder
+- Mentor
+- Admin
+
+  ### Request Body Fields
+  - `username` (string, required) - Registered username or email address.
+  - `password` (string, required) - Plaintext password.
+  - `role` (string, optional) - Target dashboard role ("founder" | "mentor" | "admin").
+
+  ### Response Status Codes
+  - `200` - Authentication successful. Returns user object, token, and role.
+  - `400` - Missing username or required credentials.
+  - `401` - Invalid username or password.
+  - `403` - Account pending mentor approval or suspended by Admin.
+  - `500` - Internal server error.
+
+  ### Response Example (200)
+  ```json
+  {
+    "success": true,
+    "user": {
+      "id": "usr_founder_01",
+      "name": "Vishal Kumar",
+      "email": "vishal1232@gmail.com",
+      "role": "founder",
+      "status": "active",
+      "token": "jwt_sample_token_founder"
+    }
+  }
+  ```
+}

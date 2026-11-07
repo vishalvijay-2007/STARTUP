@@ -1,0 +1,51 @@
+meta {
+  name: Update Appearance Settings
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/settings/appearance
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "theme": "light",
+    "density": "comfortable"
+  }
+}
+
+docs {
+  # Update Appearance Settings
+  Update theme mode (light, system) and dashboard layout styling.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Founder
+- Mentor
+- Admin
+
+  ### Response Status Codes
+  - `200` - Appearance preferences saved.
+
+  ### Response Example (200)
+  ```json
+  {
+    "success": true,
+    "theme": "light"
+  }
+  ```
+}

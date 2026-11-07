@@ -1,0 +1,45 @@
+meta {
+  name: Get Recommendation History
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/ai/course-recommendations/history
+  body: none
+  auth: bearer
+}
+
+headers {
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Get Recommendation History
+  Fetch previous AI course recommendation runs generated for the user.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Founder
+- Admin
+
+  ### Response Status Codes
+  - `200` - History array returned.
+
+  ### Response Example (200)
+  ```json
+  [
+    {
+      "id": "crun_101",
+      "query": "FinTech RBI compliance",
+      "createdAt": "2026-11-05T14:20:00.000Z"
+    }
+  ]
+  ```
+}

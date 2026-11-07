@@ -1,0 +1,68 @@
+meta {
+  name: User Registration
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/auth/register
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "Aditi Sharma",
+    "email": "aditi.sharma@example.in",
+    "password": "Password123!",
+    "role": "founder",
+    "startupName": "AgroNext Dynamics",
+    "industry": "AgriTech",
+    "phone": "+91 98765 43210"
+  }
+}
+
+docs {
+  # User Registration
+  Register a new Founder or Mentor account on the platform.
+
+  ### Authentication
+  Public (No authorization header required)
+
+  ### Allowed Roles
+  - Guest
+
+  ### Request Body Fields
+  - `name` (string, required) - Full name of the user.
+  - `email` (string, required) - Unique email address.
+  - `password` (string, required) - Password (min 8 characters).
+  - `role` (string, required) - Role to register as: "founder" or "mentor".
+  - `startupName` (string, optional) - Required if registering as founder.
+  - `industry` (string, optional) - Industry category if founder.
+  - `phone` (string, optional) - Indian phone number (+91).
+
+  ### Response Status Codes
+  - `201` - Account registered successfully.
+  - `400` - Validation failed or missing required fields.
+  - `409` - Email address already registered.
+  - `500` - Internal server error.
+
+  ### Response Example (201)
+  ```json
+  {
+    "success": true,
+    "message": "Account created successfully",
+    "user": {
+      "id": "usr_founder_02",
+      "name": "Aditi Sharma",
+      "email": "aditi.sharma@example.in",
+      "role": "founder",
+      "status": "active"
+    }
+  }
+  ```
+}

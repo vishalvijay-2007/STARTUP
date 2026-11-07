@@ -1,0 +1,52 @@
+meta {
+  name: Submit Resource Request
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/resources/request
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "resourceId": "res_1",
+    "startupId": "stp_101",
+    "purpose": "Training computer vision model for Chennai hospital diagnostics.",
+    "requestedQuantity": 1
+  }
+}
+
+docs {
+  # Submit Resource Request
+  Founder application to allocate incubator hardware or cloud grants.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Founder
+
+  ### Response Status Codes
+  - `201` - Resource request queued for Admin approval.
+  - `400` - Missing required parameters.
+
+  ### Response Example (201)
+  ```json
+  {
+    "success": true,
+    "message": "Resource request submitted for review."
+  }
+  ```
+}

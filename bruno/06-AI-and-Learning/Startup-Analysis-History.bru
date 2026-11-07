@@ -1,0 +1,46 @@
+meta {
+  name: Get Startup Analysis History
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/api/ai/startup-analysis/history
+  body: none
+  auth: bearer
+}
+
+headers {
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Get Startup Analysis History
+  List prior AI analyses generated for incubated ventures.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Founder
+- Admin
+
+  ### Response Status Codes
+  - `200` - Analyses history list returned.
+
+  ### Response Example (200)
+  ```json
+  [
+    {
+      "id": "ana_101",
+      "startupName": "BharatMed HealthTech",
+      "score": 84,
+      "createdAt": "2026-11-06T08:00:00.000Z"
+    }
+  ]
+  ```
+}

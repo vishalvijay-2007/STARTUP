@@ -1,0 +1,52 @@
+meta {
+  name: Assign Mentor to Startup
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/mentors/assign
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "mentorId": "usr_mentor_1",
+    "startupId": "stp_101",
+    "notes": "Mentoring on Series A fundraising and unit economics."
+  }
+}
+
+docs {
+  # Assign Mentor to Startup
+  Link an approved mentor to an incubated startup venture.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Admin
+
+  ### Response Status Codes
+  - `200` - Mentor assigned successfully.
+  - `403` - Admin authorization required.
+  - `404` - Mentor or startup not found.
+
+  ### Response Example (200)
+  ```json
+  {
+    "success": true,
+    "message": "Mentor assigned to startup."
+  }
+  ```
+}

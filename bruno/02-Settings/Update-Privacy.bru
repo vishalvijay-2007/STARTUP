@@ -1,0 +1,51 @@
+meta {
+  name: Update Privacy Settings
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/api/settings/privacy
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "profileVisibility": "workspace",
+    "workspaceActivityVisibility": true
+  }
+}
+
+docs {
+  # Update Privacy Settings
+  Set profile visibility and team activity sharing preferences.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Founder
+- Mentor
+- Admin
+
+  ### Response Status Codes
+  - `200` - Privacy settings saved.
+
+  ### Response Example (200)
+  ```json
+  {
+    "success": true,
+    "message": "Privacy settings saved."
+  }
+  ```
+}

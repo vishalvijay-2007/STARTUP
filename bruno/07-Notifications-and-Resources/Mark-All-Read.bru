@@ -1,0 +1,43 @@
+meta {
+  name: Mark All Notifications Read
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/notifications/mark-all-read
+  body: none
+  auth: bearer
+}
+
+headers {
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Mark All Notifications Read
+  Mark all pending notifications as read for current user.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Founder
+- Mentor
+- Admin
+
+  ### Response Status Codes
+  - `200` - All notifications cleared.
+
+  ### Response Example (200)
+  ```json
+  {
+    "success": true,
+    "message": "All notifications marked as read."
+  }
+  ```
+}

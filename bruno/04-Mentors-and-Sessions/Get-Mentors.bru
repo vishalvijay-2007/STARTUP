@@ -1,0 +1,54 @@
+meta {
+  name: Get Mentors List
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/mentors
+  body: none
+  auth: bearer
+}
+
+headers {
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Get Mentors List
+  List active approved mentors with expertise tags, bio, and availability.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Founder
+- Mentor
+- Admin
+
+  ### Response Status Codes
+  - `200` - List of approved mentors returned.
+  - `401` - Unauthorized.
+
+  ### Response Example (200)
+  ```json
+  [
+    {
+      "id": "usr_mentor_1",
+      "name": "Dr. Ramesh Sundaram",
+      "title": "Senior FinTech Advisor",
+      "expertise": [
+        "FinTech",
+        "Regulatory Compliance",
+        "Scale-up"
+      ],
+      "rating": 4.9,
+      "sessionsCompleted": 42
+    }
+  ]
+  ```
+}

@@ -1,0 +1,53 @@
+meta {
+  name: Activate or Suspend Founder
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/admin/founders/:id/status
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "status": "active"
+  }
+}
+
+docs {
+  # Activate or Suspend Founder
+  Activate or suspend a founder account with immediate authorization enforcement.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Admin
+
+  ### Request Body Fields
+  - `status` (string, required) - "active" or "suspended".
+
+  ### Response Status Codes
+  - `200` - Founder status updated.
+  - `403` - Admin privileges required.
+
+  ### Response Example (200)
+  ```json
+  {
+    "success": true,
+    "status": "active",
+    "message": "Founder account status changed."
+  }
+  ```
+}

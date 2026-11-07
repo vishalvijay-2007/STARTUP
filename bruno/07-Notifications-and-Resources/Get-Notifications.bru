@@ -1,0 +1,48 @@
+meta {
+  name: Get User Notifications
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/notifications
+  body: none
+  auth: bearer
+}
+
+headers {
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Get User Notifications
+  Retrieve alerts, meeting reminders, milestone progress, and incubation announcements.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Founder
+- Mentor
+- Admin
+
+  ### Response Status Codes
+  - `200` - Notifications list returned.
+
+  ### Response Example (200)
+  ```json
+  [
+    {
+      "id": "notif_1",
+      "title": "Mentor Session Confirmed",
+      "message": "Dr. Ramesh Sundaram confirmed your session on Nov 12 at 2:00 PM IST.",
+      "read": false,
+      "createdAt": "2026-11-06T09:00:00.000Z"
+    }
+  ]
+  ```
+}

@@ -1,0 +1,46 @@
+meta {
+  name: Admin Dashboard Stats
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/admin/dashboard/stats
+  body: none
+  auth: bearer
+}
+
+headers {
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Admin Dashboard Stats
+  Fetch aggregated real-time metrics: active founders, mentors, pending applications, cohorts, and total funding in INR.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Admin
+
+  ### Response Status Codes
+  - `200` - Dashboard stats object returned.
+  - `403` - Admin access required.
+
+  ### Response Example (200)
+  ```json
+  {
+    "totalFounders": 142,
+    "totalMentors": 38,
+    "pendingMentorApplications": 4,
+    "totalFundingINR": 125000000,
+    "currency": "INR",
+    "activeCohorts": 6
+  }
+  ```
+}

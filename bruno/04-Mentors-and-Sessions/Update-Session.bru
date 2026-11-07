@@ -1,0 +1,53 @@
+meta {
+  name: Update Session Status or Feedback
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{baseUrl}}/api/sessions/:id
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "status": "completed",
+    "mentorNotes": "Productive review. Cash runway is healthy at 18 months in INR.",
+    "rating": 5
+  }
+}
+
+docs {
+  # Update Session Status or Feedback
+  Complete a session, submit mentor feedback, or reschedule.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Mentor
+- Founder
+- Admin
+
+  ### Response Status Codes
+  - `200` - Session updated.
+  - `404` - Session ID not found.
+
+  ### Response Example (200)
+  ```json
+  {
+    "success": true,
+    "message": "Session status marked as completed."
+  }
+  ```
+}

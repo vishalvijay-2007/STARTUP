@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 60" fill="none" width="100%" height="100%">
+  <defs>
+    <linearGradient id="purpleGradWhite" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#7B66FF"/>
+      <stop offset="100%" stop-color="#5244E0"/>
+    </linearGradient>
+    <filter id="purpleGlowWhite" x="-20%" y="-20%" width="140%" height="140%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Rocket Container Icon -->
+  <g transform="translate(6, 6)" filter="url(#purpleGlowWhite)">
+    <rect width="48" height="48" rx="14" fill="url(#purpleGradWhite)" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
+    <g transform="translate(10, 10) scale(1.15)" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none">
+      <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/>
+      <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/>
+      <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/>
+      <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/>
+      <circle cx="15" cy="9" r="1" fill="#FFFFFF"/>
+    </g>
+  </g>
+
+  <!-- Brand Typography in White & Purple-300 -->
+  <g transform="translate(66, 12)">
+    <!-- Startup -->
+    <text x="0" y="20" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="22" font-weight="900" fill="#FFFFFF" letter-spacing="-0.5">Startup</text>
+    <!-- INCUBATION PLATFORM -->
+    <text x="0" y="36" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="10.5" font-weight="800" fill="#C4B5FD" letter-spacing="1.2">INCUBATION PLATFORM</text>
+  </g>
+</svg>

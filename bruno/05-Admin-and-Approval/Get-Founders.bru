@@ -1,0 +1,51 @@
+meta {
+  name: Get All Registered Founders
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/admin/founders
+  body: none
+  auth: bearer
+}
+
+headers {
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Get All Registered Founders
+  List all registered founders with startup details, registration date, status, and last login.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Admin
+
+  ### Response Status Codes
+  - `200` - Founders table records returned.
+  - `403` - Admin access required.
+
+  ### Response Example (200)
+  ```json
+  [
+    {
+      "id": "usr_founder_01",
+      "name": "Vishal Kumar",
+      "email": "vishal1232@gmail.com",
+      "phone": "+91 94440 12345",
+      "startupName": "BharatMed HealthTech",
+      "industry": "HealthTech",
+      "status": "active",
+      "registeredAt": "2026-10-15T08:30:00.000Z",
+      "lastLogin": "2026-11-06T09:45:00.000Z"
+    }
+  ]
+  ```
+}

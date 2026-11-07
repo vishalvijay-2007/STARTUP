@@ -1,0 +1,77 @@
+meta {
+  name: Get Current Settings
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/settings
+  body: none
+  auth: bearer
+}
+
+headers {
+  Authorization: Bearer {{authToken}}
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # Get Current Settings
+  Fetch all user settings: account, security, notifications, appearance, privacy, and workspace.
+
+  ### Authentication
+  Bearer Token
+
+  ### Allowed Roles
+  - Founder
+- Mentor
+- Admin
+
+  ### Response Status Codes
+  - `200` - Settings returned successfully.
+  - `401` - Unauthorized request.
+  - `500` - Internal server error.
+
+  ### Response Example (200)
+  ```json
+  {
+    "success": true,
+    "settings": {
+      "account": {
+        "username": "vishal1232",
+        "email": "vishal1232@gmail.com",
+        "language": "English (India)",
+        "timezone": "Asia/Kolkata (IST +05:30)",
+        "currency": "INR (₹)"
+      },
+      "security": {
+        "twoFactorEnabled": false,
+        "activeSessions": 1
+      },
+      "notifications": {
+        "emailNotifications": true,
+        "mentorReminders": true,
+        "milestoneUpdates": true,
+        "resourceAnnouncements": false,
+        "workspaceActivity": true
+      },
+      "appearance": {
+        "theme": "light",
+        "compactMode": false
+      },
+      "privacy": {
+        "profileVisibility": "workspace",
+        "workspaceActivityVisibility": true
+      },
+      "workspace": {
+        "name": "Chennai Innovation Incubator",
+        "plan": "Pro Cohort",
+        "maxMembers": 20
+      }
+    }
+  }
+  ```
+}
